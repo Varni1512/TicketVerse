@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Event } from '../types';
 import { eventService } from '../services/eventService';
 import { EventCard } from '../components/shared/EventCard';

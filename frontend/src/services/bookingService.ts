@@ -1,4 +1,4 @@
-import { Booking, Seat } from '../types';
+import { Booking } from '../types';
 import { addMockBooking, getMockBookingsByUserId } from '../data/bookings';
 import { eventService } from './eventService';
 import { getCurrentUser } from '../data/users';

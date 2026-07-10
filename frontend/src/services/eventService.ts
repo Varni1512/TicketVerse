@@ -1,6 +1,6 @@
 import { Event, EventCategory } from '../types';
 import { mockEvents, mockCategories, mockCities } from '../data/events';
-import { getSeatsForEvent, eventSeatsMap } from '../data/seats';
+import { getSeatsForEvent } from '../data/seats';
 
 // Simulate network delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -34,8 +34,6 @@ export const eventService = {
   reserveSeats: async (eventId: string, seatIds: string[]) => {
     await delay(600);
     const seats = getSeatsForEvent(eventId);
-    let success = true;
-
     // Check availability
     const seatsToBook = seats.filter(s => seatIds.includes(s.id));
     if (seatsToBook.some(s => s.status !== 'available')) {

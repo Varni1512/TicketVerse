@@ -1,5 +1,4 @@
-import React from 'react';
-import { Ticket, Github, Twitter, Linkedin } from 'lucide-react';
+import { Ticket } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Footer = () => {
@@ -16,9 +15,9 @@ export const Footer = () => {
               Your premium destination for discovering and booking the best events worldwide.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-slate-400 hover:text-slate-500"><Twitter className="h-5 w-5" /></a>
-              <a href="#" className="text-slate-400 hover:text-slate-500"><Github className="h-5 w-5" /></a>
-              <a href="#" className="text-slate-400 hover:text-slate-500"><Linkedin className="h-5 w-5" /></a>
+              <a href="https://twitter.com" target="_blank" rel="noreferrer" className="text-slate-400 hover:text-slate-500">Twitter</a>
+              <a href="https://github.com" target="_blank" rel="noreferrer" className="text-slate-400 hover:text-slate-500">Github</a>
+              <a href="https://linkedin.com" target="_blank" rel="noreferrer" className="text-slate-400 hover:text-slate-500">LinkedIn</a>
             </div>
           </div>
           
