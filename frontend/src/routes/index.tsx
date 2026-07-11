@@ -1,6 +1,6 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { AppLayout } from '../layouts/AppLayout';
-import { Home } from '../pages/Home';
+import { Landing } from '../pages/Landing';
 import { Events } from '../pages/Events';
 import { EventDetails } from '../pages/EventDetails';
 import { SeatSelection } from '../pages/SeatSelection';
@@ -9,6 +9,11 @@ import { BookingSuccess } from '../pages/BookingSuccess';
 import { MyBookings } from '../pages/MyBookings';
 import { Login } from '../pages/Login';
 import { Register } from '../pages/Register';
+import { About } from '../pages/About';
+import { Contact } from '../pages/Contact';
+import { Categories } from '../pages/Categories';
+import { Album } from '../pages/Album';
+import { AlbumDetails } from '../pages/AlbumDetails';
 
 const NotFound = () => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
@@ -24,8 +29,13 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     errorElement: <NotFound />,
     children: [
-      { index: true, element: <Home /> },
+      { index: true, element: <Landing /> },
       { path: 'events', element: <Events /> },
+      { path: 'categories', element: <Categories /> },
+      { path: 'about', element: <About /> },
+      { path: 'album', element: <Album /> },
+      { path: 'album/:id', element: <AlbumDetails /> },
+      { path: 'contact', element: <Contact /> },
       { path: 'events/:id', element: <EventDetails /> },
       { path: 'events/:id/seats', element: <SeatSelection /> },
       { path: 'checkout', element: <Checkout /> },

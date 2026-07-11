@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Ticket, Search, User as UserIcon, Menu, LogOut, Sun, Moon } from 'lucide-react';
-import { Button } from '../ui/Button';
+import { Ticket, User as UserIcon, Menu, LogOut, Sun, Moon, X } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
 import { useAppStore } from '../../store/useAppStore';
 
 export const Navbar = () => {
   const { user, logout, theme, toggleTheme } = useAppStore();
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -25,20 +26,17 @@ export const Navbar = () => {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-8">
-          <Link to="/events" className="text-sm font-medium text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400">Events</Link>
-          <span className="text-sm font-medium text-slate-400 cursor-not-allowed">Categories</span>
-          <span className="text-sm font-medium text-slate-400 cursor-not-allowed">About</span>
+          <Link to="/" className="text-sm font-medium text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400 transition-colors">Home</Link>
+          <Link to="/about" className="text-sm font-medium text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400 transition-colors">About</Link>
+          <Link to="/events" className="text-sm font-medium text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400 transition-colors">Events</Link>
+          <Link to="/contact" className="text-sm font-medium text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400 transition-colors">Contact</Link>
         </div>
 
         {/* Actions */}
         <div className="hidden md:flex items-center gap-4">
-          <button className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
-            <Search className="h-5 w-5" />
-          </button>
-          
           <button 
             onClick={toggleTheme} 
-            className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-2 rounded-full"
+            className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-2 rounded-full transition-colors"
             aria-label="Toggle Dark Mode"
           >
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -82,14 +80,9 @@ export const Navbar = () => {
               )}
             </div>
           ) : (
-            <>
-              <Link to="/login">
-                <Button variant="ghost" className="hidden lg:inline-flex">Log in</Button>
-              </Link>
-              <Link to="/register">
-                <Button>Sign up</Button>
-              </Link>
-            </>
+            <Link to="/login">
+              <Button>Login / Signup</Button>
+            </Link>
           )}
         </div>
 
@@ -98,11 +91,50 @@ export const Navbar = () => {
           <button onClick={toggleTheme} className="text-slate-500">
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
-          <button className="text-slate-500">
-            <Menu className="h-6 w-6" />
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-slate-500 focus:outline-none">
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-4 space-y-4 shadow-lg absolute w-full top-16 left-0">
+          <div className="flex flex-col space-y-3">
+            <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="text-base font-medium text-slate-700 dark:text-slate-200 hover:text-primary-600 dark:hover:text-primary-400">Home</Link>
+            <Link to="/about" onClick={() => setIsMobileMenuOpen(false)} className="text-base font-medium text-slate-700 dark:text-slate-200 hover:text-primary-600 dark:hover:text-primary-400">About</Link>
+            <Link to="/events" onClick={() => setIsMobileMenuOpen(false)} className="text-base font-medium text-slate-700 dark:text-slate-200 hover:text-primary-600 dark:hover:text-primary-400">Events</Link>
+            <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="text-base font-medium text-slate-700 dark:text-slate-200 hover:text-primary-600 dark:hover:text-primary-400">Contact</Link>
+          </div>
+          <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+            {user ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400">
+                    {user.avatarUrl ? <img src={user.avatarUrl} alt={user.name} className="h-10 w-10 rounded-full" /> : <UserIcon className="h-5 w-5" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">{user.name}</p>
+                    <p className="text-xs text-slate-500">{user.email}</p>
+                  </div>
+                </div>
+                <Link to="/my-bookings" onClick={() => setIsMobileMenuOpen(false)} className="block text-base font-medium text-slate-700 dark:text-slate-200 hover:text-primary-600 dark:hover:text-primary-400">My Bookings</Link>
+                <button 
+                  onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
+                  className="w-full text-left flex items-center text-base font-medium text-red-600 hover:text-red-700"
+                >
+                  <LogOut className="h-5 w-5 mr-2" />
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="block w-full">
+                <Button className="w-full">Login / Signup</Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 };
