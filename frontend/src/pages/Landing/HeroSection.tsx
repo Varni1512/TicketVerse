@@ -80,7 +80,7 @@ export const HeroSection = () => {
                 </div>
                 <div className="flex-1 relative">
                   <img 
-                    src="https://images.unsplash.com/photo-1540039155732-676229ebca02?q=80&w=1200&auto=format&fit=crop" 
+                    src="https://images.unsplash.com/photo-1585699324551-f6c309eedeca?q=80&w=1200&auto=format&fit=crop" 
                     alt="Event Showcase" 
                     className="w-full h-full object-cover"
                   />

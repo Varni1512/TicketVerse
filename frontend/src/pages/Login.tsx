@@ -41,11 +41,11 @@ export const Login = () => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email address</label>
-              <Input type="email" required placeholder="john@example.com" defaultValue="john.doe@example.com" />
+              <Input type="email" required placeholder="example@gmail.com" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
-              <Input type="password" required placeholder="••••••••" defaultValue="password123" />
+              <Input type="password" required placeholder="••••••••" />
             </div>
           </div>
 

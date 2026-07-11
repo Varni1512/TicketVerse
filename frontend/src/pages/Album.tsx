@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 export const Album = () => {
   const featuredImage = {
-    src: 'https://images.unsplash.com/photo-1540039155732-676229ebca02?q=80&w=2000&auto=format&fit=crop',
+    src: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?q=80&w=2000&auto=format&fit=crop',
     alt: 'Massive Festival Crowd'
   };
 

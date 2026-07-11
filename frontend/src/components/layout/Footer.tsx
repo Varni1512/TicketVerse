@@ -52,9 +52,6 @@ export const Footer = () => {
         </div>
         <div className="mt-12 border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col md:flex-row items-center justify-between text-sm text-slate-500">
           <p>© {new Date().getFullYear()} TicketVerse. All rights reserved.</p>
-          <div className="flex space-x-4 mt-4 md:mt-0">
-            <span>Built with React & Tailwind</span>
-          </div>
         </div>
       </div>
     </footer>

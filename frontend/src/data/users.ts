@@ -3,8 +3,8 @@ import { User } from '../types';
 export const mockUsers: User[] = [
   {
     id: 'u1',
-    name: 'John Doe',
-    email: 'john.doe@example.com',
+    name: 'VarniKumar Patel',
+    email: 'varni12@gmail.com',
     avatarUrl: 'https://i.pravatar.cc/150?u=u1'
   }
 ];
