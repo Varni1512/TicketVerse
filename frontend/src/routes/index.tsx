@@ -14,6 +14,7 @@ import { Contact } from '../pages/Contact';
 import { Categories } from '../pages/Categories';
 import { Album } from '../pages/Album';
 import { AlbumDetails } from '../pages/AlbumDetails';
+import { ForgotPassword } from '../pages/ForgotPassword';
 
 const NotFound = () => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
       { path: 'my-bookings', element: <MyBookings /> },
       { path: 'login', element: <Login /> },
       { path: 'register', element: <Register /> },
+      { path: 'forgot-password', element: <ForgotPassword /> },
     ]
   }
 ]);

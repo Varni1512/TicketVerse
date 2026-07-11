@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Ticket } from 'lucide-react';
+import { Ticket, Eye, EyeOff } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { getCurrentUser } from '../data/users';
 
@@ -10,6 +10,7 @@ export const Register = () => {
   const navigate = useNavigate();
   const login = useAppStore(state => state.login);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +50,16 @@ export const Register = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
-              <Input type="password" required placeholder="••••••••" />
+              <div className="relative">
+                <Input type={showPassword ? "text" : "password"} required placeholder="••••••••" />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
             </div>
           </div>
 
