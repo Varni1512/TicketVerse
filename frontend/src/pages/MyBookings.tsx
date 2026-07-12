@@ -20,7 +20,7 @@ export const MyBookings = () => {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const data = await bookingService.getUserBookings(user.id);
+        const data = await bookingService.getUserBookings();
         setBookings(data);
       } catch (error) {
         console.error('Failed to fetch bookings', error);
@@ -85,7 +85,7 @@ export const MyBookings = () => {
                   <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400 mt-4">
                     <div className="flex items-center">
                       <Calendar className="mr-2 h-4 w-4 text-slate-400" />
-                      {new Date(booking.event.date).toLocaleDateString()} at {booking.event.time}
+                      {booking.event.eventDate || booking.event.date ? new Date(booking.event.eventDate || booking.event.date).toLocaleDateString() : 'TBD'} at {booking.event.startTime || booking.event.time || 'TBD'}
                     </div>
                     <div className="flex items-center">
                       <MapPin className="mr-2 h-4 w-4 text-slate-400" />
@@ -94,7 +94,7 @@ export const MyBookings = () => {
                     <div className="flex items-center">
                       <TicketIcon className="mr-2 h-4 w-4 text-slate-400" />
                       Seats: <span className="font-medium text-slate-900 dark:text-white ml-1">
-                        {booking.seats.map(s => `${s.row}${s.number}`).join(', ')}
+                        {booking.seats && booking.seats.length > 0 ? booking.seats.map(s => `${s.row}${s.number}`).join(', ') : 'Not assigned'}
                       </span>
                     </div>
                   </div>
@@ -103,11 +103,69 @@ export const MyBookings = () => {
                 <div className="mt-6 flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
                   <div>
                     <p className="text-sm text-slate-500">Total Paid</p>
-                    <p className="font-bold text-primary-600 dark:text-primary-400">${booking.totalPrice.toFixed(2)}</p>
+                    <p className="font-bold text-primary-600 dark:text-primary-400">₹{booking.totalPrice.toFixed(2)}</p>
                   </div>
                   <div className="flex gap-3">
-                    <Button variant="outline" size="sm">Download PDF</Button>
-                    <Link to={`/events/${booking.eventId}`}>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      const ticketHtml = `
+                        <html>
+                          <head>
+                            <title>Ticket - ${booking.event.title}</title>
+                            <style>
+                              body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+                              .ticket { border: 2px dashed #ccc; padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 12px; }
+                              .header { text-align: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+                              .title { font-size: 24px; font-weight: bold; margin: 0; color: #1e293b; }
+                              .ref { color: #64748b; font-size: 14px; margin-top: 5px; }
+                              .details { margin-bottom: 20px; line-height: 1.6; }
+                              .row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+                              .label { color: #64748b; font-size: 14px; }
+                              .value { font-weight: bold; font-size: 16px; }
+                              .footer { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
+                            </style>
+                          </head>
+                          <body>
+                            <div class="ticket">
+                              <div class="header">
+                                <h1 class="title">${booking.event.title}</h1>
+                                <p class="ref">Booking ID: #${booking.id}</p>
+                              </div>
+                              <div class="details">
+                                <div class="row"><span class="label">Date & Time</span><span class="value">${booking.event.eventDate || booking.event.date ? new Date(booking.event.eventDate || booking.event.date).toLocaleDateString() : 'TBD'} at ${booking.event.startTime || booking.event.time || 'TBD'}</span></div>
+                                <div class="row"><span class="label">Venue</span><span class="value">${booking.event.venue}, ${booking.event.city}</span></div>
+                                <div class="row"><span class="label">Seats</span><span class="value">${booking.seats && booking.seats.length > 0 ? booking.seats.map(s => s.row + s.number).join(', ') : 'Not assigned'}</span></div>
+                                <div class="row"><span class="label">Amount Paid</span><span class="value">₹${booking.totalPrice.toFixed(2)}</span></div>
+                                <div class="row"><span class="label">Status</span><span class="value">${booking.status.toUpperCase()}</span></div>
+                              </div>
+                              <div class="footer">
+                                Please present this ticket at the venue.<br/>
+                                Thank you for using TicketVerse!
+                              </div>
+                            </div>
+                          </body>
+                        </html>
+                      `;
+                      const iframe = document.createElement('iframe');
+                      iframe.style.display = 'none';
+                      document.body.appendChild(iframe);
+                      
+                      if (iframe.contentDocument) {
+                        iframe.contentDocument.write(ticketHtml);
+                        iframe.contentDocument.close();
+                      }
+                      
+                      if (iframe.contentWindow) {
+                        iframe.contentWindow.focus();
+                        iframe.contentWindow.print();
+                      }
+                      
+                      setTimeout(() => {
+                        document.body.removeChild(iframe);
+                      }, 2000);
+                    }}>
+                      Download PDF
+                    </Button>
+                    <Link to={`/events/${booking.eventId || booking.event.id}`}>
                       <Button variant="secondary" size="sm">Event Details</Button>
                     </Link>
                   </div>

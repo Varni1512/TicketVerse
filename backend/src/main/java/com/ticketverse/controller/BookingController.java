@@ -3,6 +3,7 @@ package com.ticketverse.controller;
 import com.ticketverse.dto.request.BookingRequest;
 import com.ticketverse.dto.response.BookingResponse;
 import com.ticketverse.service.BookingService;
+import com.ticketverse.service.OtpService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,12 +19,31 @@ import java.util.List;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final OtpService otpService;
+
+    @PostMapping("/send-otp")
+    public ResponseEntity<String> sendOtp(Authentication authentication) {
+        String userEmail = authentication.getName();
+        otpService.generateAndSendOtp(userEmail);
+        return ResponseEntity.ok("OTP sent to your email address.");
+    }
 
     @PostMapping
-    public ResponseEntity<BookingResponse> createBooking(@Valid @RequestBody BookingRequest bookingRequest, Authentication authentication) {
+    public ResponseEntity<?> createBooking(@Valid @RequestBody BookingRequest bookingRequest, Authentication authentication) {
         String userEmail = authentication.getName();
-        BookingResponse bookingResponse = bookingService.createBooking(bookingRequest, userEmail);
-        return new ResponseEntity<>(bookingResponse, HttpStatus.CREATED);
+        
+        // Verify OTP
+        boolean isValid = otpService.verifyOtp(userEmail, bookingRequest.getOtpCode());
+        if (!isValid) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid OTP or OTP expired");
+        }
+        
+        try {
+            BookingResponse bookingResponse = bookingService.createBooking(bookingRequest, userEmail);
+            return new ResponseEntity<>(bookingResponse, HttpStatus.CREATED);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 
     @GetMapping

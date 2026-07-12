@@ -22,4 +22,5 @@ public class BookingResponse {
     private String bookingStatus;
     private Long eventId;
     private Long userId;
+    private java.util.List<SeatResponse> seats;
 }

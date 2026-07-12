@@ -249,7 +249,7 @@ export const ManageEvents = () => {
                   <Input label="Venue" name="venue" icon={<MapPin className="w-5 h-5"/>} value={eventData.venue} onChange={handleChange} required />
                   <Input label="City" name="city" value={eventData.city} onChange={handleChange} required />
                   
-                  <Input label="Event Date" type="date" name="eventDate" icon={<Calendar className="w-5 h-5"/>} value={eventData.eventDate} onChange={handleChange} required />
+                  <Input label="Event Date" type="date" name="eventDate" value={eventData.eventDate} onChange={handleChange} required />
                   <Input label="Start Time" type="time" name="startTime" value={eventData.startTime} onChange={handleChange} required />
                 </div>
 

@@ -20,4 +20,7 @@ public class BookingRequest {
 
     @NotEmpty(message = "At least one seat must be selected")
     private List<Long> seatIds;
+
+    @NotEmpty(message = "OTP Code is required")
+    private String otpCode;
 }

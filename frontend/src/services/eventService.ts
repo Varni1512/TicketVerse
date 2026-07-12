@@ -4,7 +4,23 @@ import { api } from './api';
 export const eventService = {
   getEvents: async (): Promise<Event[]> => {
     const response = await api.get('/events');
-    return response.data;
+    const events: Event[] = response.data;
+    
+    const eventsWithPrices = await Promise.all(
+      events.map(async (event) => {
+        try {
+          const seatsRes = await api.get(`/events/${event.id}/seats`);
+          const seats = seatsRes.data;
+          const prices = seats.map((s: any) => s.price);
+          const minPrice = prices.length > 0 ? Math.min(...prices) : undefined;
+          return { ...event, price: minPrice };
+        } catch (e) {
+          return event;
+        }
+      })
+    );
+    
+    return eventsWithPrices;
   },
 
   getEventById: async (id: string): Promise<Event | undefined> => {
@@ -32,7 +48,8 @@ export const eventService = {
       ...seat,
       row: seat.rowNum,
       number: seat.seatNumber,
-      tier: seat.type ? seat.type.toLowerCase() : 'regular'
+      tier: seat.type ? seat.type.toLowerCase() : 'regular',
+      status: seat.status ? seat.status.toLowerCase() : 'available'
     }));
   },
 

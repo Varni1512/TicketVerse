@@ -40,4 +40,8 @@ public class Booking {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
+
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
+    @Builder.Default
+    private java.util.List<Seat> seats = new java.util.ArrayList<>();
 }

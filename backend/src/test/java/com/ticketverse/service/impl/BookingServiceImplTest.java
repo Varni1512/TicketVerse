@@ -68,7 +68,7 @@ public class BookingServiceImplTest {
 
     @Test
     void testCreateBooking_Success() {
-        BookingRequest request = new BookingRequest(1L, List.of(1L));
+        BookingRequest request = new BookingRequest(1L, List.of(1L), "123456");
 
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
         when(eventRepository.findById(1L)).thenReturn(Optional.of(event));

@@ -41,7 +41,7 @@ export const BookingSuccess = () => {
             </div>
             <div className="text-right">
               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Total Paid</p>
-              <p className="text-primary-600 dark:text-primary-400 font-bold">${booking.totalPrice.toFixed(2)}</p>
+              <p className="text-primary-600 dark:text-primary-400 font-bold">₹{booking.totalPrice.toFixed(2)}</p>
             </div>
           </div>
           
@@ -60,7 +60,7 @@ export const BookingSuccess = () => {
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-1 flex items-center"><Calendar className="h-4 w-4 mr-1"/> Date & Time</p>
               <p className="font-semibold text-slate-900 dark:text-white">
-                {new Date(booking.event.date).toLocaleDateString()} at {booking.event.time}
+                {booking.event.eventDate ? new Date(booking.event.eventDate).toLocaleDateString() : 'TBD'} at {booking.event.startTime || booking.event.time || 'TBD'}
               </p>
             </div>
             <div>

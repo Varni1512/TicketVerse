@@ -60,6 +60,7 @@ public class BookingServiceImpl implements BookingService {
 
             // Lock seat
             seat.setStatus("BOOKED");
+            // We will save the seat again with the booking reference later
             seatRepository.save(seat);
 
             totalAmount = totalAmount.add(seat.getPrice());
@@ -74,6 +75,15 @@ public class BookingServiceImpl implements BookingService {
                 .build();
 
         Booking savedBooking = bookingRepository.save(booking);
+        
+        java.util.List<Seat> bookedSeats = new java.util.ArrayList<>();
+        for (Long seatId : bookingRequest.getSeatIds()) {
+            Seat seat = seatRepository.findById(seatId).get();
+            seat.setBooking(savedBooking);
+            bookedSeats.add(seatRepository.save(seat));
+        }
+        savedBooking.setSeats(bookedSeats);
+
         return bookingMapper.mapToResponse(savedBooking);
     }
 
@@ -120,7 +130,14 @@ public class BookingServiceImpl implements BookingService {
 
         booking.setBookingStatus("CANCELLED");
         bookingRepository.save(booking);
-        // Note: Ideally, we should free up the seats, but since we didn't link seats to the booking in DB, 
-        // a real system would need a booking_seats table. For now, we update booking status.
+        
+        // Free up the seats
+        if (booking.getSeats() != null) {
+            for (Seat seat : booking.getSeats()) {
+                seat.setStatus("AVAILABLE");
+                seat.setBooking(null);
+                seatRepository.save(seat);
+            }
+        }
     }
 }
