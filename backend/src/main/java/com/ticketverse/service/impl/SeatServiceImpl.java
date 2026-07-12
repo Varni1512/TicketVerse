@@ -62,4 +62,20 @@ public class SeatServiceImpl implements SeatService {
         Seat savedSeat = seatRepository.save(seat);
         return seatMapper.mapToResponse(savedSeat);
     }
+
+    @Override
+    @Transactional
+    public List<SeatResponse> createSeatsBulk(Long eventId, List<SeatRequest> seatRequests) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
+
+        List<Seat> seats = seatRequests.stream()
+                .map(req -> seatMapper.mapToEntity(req, event))
+                .collect(Collectors.toList());
+
+        List<Seat> savedSeats = seatRepository.saveAll(seats);
+        return savedSeats.stream()
+                .map(seatMapper::mapToResponse)
+                .collect(Collectors.toList());
+    }
 }

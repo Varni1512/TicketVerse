@@ -110,7 +110,7 @@ export const SeatSelection = () => {
                       key={seat.id}
                       onClick={() => handleSeatClick(seat)}
                       disabled={seat.status === 'booked'}
-                      title={`${seat.tier.toUpperCase()} - $${seat.price}`}
+                      title={`${seat.tier.toUpperCase()} - ₹${seat.price}`}
                       className={`
                         w-8 h-8 md:w-10 md:h-10 rounded-t-lg rounded-b-sm border-b-4 transition-all duration-200 flex items-center justify-center text-xs font-medium
                         ${getSeatColor(seat)}
@@ -151,7 +151,7 @@ export const SeatSelection = () => {
                       <span className="text-slate-600 dark:text-slate-300">
                         Row {seat.row} - Seat {seat.number} <span className="text-xs text-slate-400 uppercase ml-1">({seat.tier})</span>
                       </span>
-                      <span className="font-medium text-slate-900 dark:text-white">${seat.price}</span>
+                      <span className="font-medium text-slate-900 dark:text-white">₹{seat.price}</span>
                     </div>
                   ))}
                 </div>
@@ -161,7 +161,7 @@ export const SeatSelection = () => {
             <div className="border-t border-slate-200 dark:border-slate-800 pt-4 mb-6">
               <div className="flex justify-between items-end">
                 <span className="text-slate-500 dark:text-slate-400">Total</span>
-                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">${totalPrice}</span>
+                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">₹{totalPrice}</span>
               </div>
             </div>
 

@@ -14,6 +14,7 @@ export interface Event {
   availableSeats: number;
   organizer: string;
   rating: number;
+  eventDate?: string;
 }
 
 export interface User {
@@ -21,6 +22,8 @@ export interface User {
   name: string;
   email: string;
   avatarUrl?: string;
+  avatar?: string;
+  role?: string;
 }
 
 export type SeatStatus = 'available' | 'booked' | 'selected';

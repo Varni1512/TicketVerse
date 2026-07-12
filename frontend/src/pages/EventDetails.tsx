@@ -16,7 +16,23 @@ export const EventDetails = () => {
       if (!id) return;
       try {
         const data = await eventService.getEventById(id);
-        if (data) setEvent(data);
+        if (data) {
+          try {
+            const seats = await eventService.getSeats(id);
+            const availableSeatsCount = seats.filter((s: any) => s.status.toLowerCase() === 'available').length;
+            const prices = seats.map((s: any) => s.price);
+            const startingPrice = prices.length > 0 ? Math.min(...prices) : 0;
+            
+            setEvent({
+              ...data,
+              availableSeats: availableSeatsCount,
+              price: startingPrice
+            });
+          } catch (seatErr) {
+            console.error('Failed to fetch seats', seatErr);
+            setEvent(data); // still set event even if seats fail
+          }
+        }
       } catch (error) {
         console.error('Failed to fetch event', error);
       } finally {
@@ -53,8 +69,8 @@ export const EventDetails = () => {
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">{event.title}</h1>
             <div className="flex flex-wrap items-center gap-6 text-slate-200">
               <div className="flex items-center"><MapPin className="mr-2 h-5 w-5 text-primary-400" />{event.venue}, {event.city}</div>
-              <div className="flex items-center"><Calendar className="mr-2 h-5 w-5 text-primary-400" />{new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-              <div className="flex items-center"><Clock className="mr-2 h-5 w-5 text-primary-400" />{event.time}</div>
+              <div className="flex items-center"><Calendar className="mr-2 h-5 w-5 text-primary-400" />{event.eventDate ? new Date(event.eventDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'TBD'}</div>
+              <div className="flex items-center"><Clock className="mr-2 h-5 w-5 text-primary-400" />{event.startTime || event.time || 'TBD'}</div>
             </div>
           </div>
         </div>
@@ -91,7 +107,7 @@ export const EventDetails = () => {
               <div className="mb-6">
                 <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">Starting from</p>
                 <div className="flex items-baseline">
-                  <span className="text-4xl font-extrabold text-slate-900 dark:text-white">${event.price}</span>
+                  <span className="text-4xl font-extrabold text-slate-900 dark:text-white">₹{event.price ?? '--'}</span>
                 </div>
               </div>
               
@@ -108,9 +124,9 @@ export const EventDetails = () => {
                 </div>
               </div>
 
-              <Link to={event.availableSeats > 0 ? `/events/${event.id}/seats` : '#'}>
-                <Button size="lg" className="w-full text-base font-semibold" disabled={event.availableSeats === 0}>
-                  {event.availableSeats > 0 ? 'Select Seats' : 'Sold Out'} <ChevronRight className="ml-2 h-5 w-5" />
+              <Link to={(event.availableSeats || 0) > 0 ? `/events/${event.id}/seats` : '#'}>
+                <Button size="lg" className="w-full text-base font-semibold" disabled={(event.availableSeats || 0) === 0}>
+                  {(event.availableSeats || 0) > 0 ? 'Select Seats' : 'Sold Out'} <ChevronRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
               <p className="text-xs text-center text-slate-400 mt-4">Safe and secure checkout</p>

@@ -16,6 +16,12 @@ import { Album } from '../pages/Album';
 import { AlbumDetails } from '../pages/AlbumDetails';
 import { ForgotPassword } from '../pages/ForgotPassword';
 
+import { AdminLayout } from '../layouts/AdminLayout';
+import { AdminDashboard } from '../pages/admin/AdminDashboard';
+import { ManageEvents } from '../pages/admin/ManageEvents';
+import { ManageAlbums } from '../pages/admin/ManageAlbums';
+import { ViewContacts } from '../pages/admin/ViewContacts';
+
 const NotFound = () => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
     <h1 className="text-6xl font-bold text-slate-900 dark:text-white mb-4">404</h1>
@@ -45,6 +51,17 @@ export const router = createBrowserRouter([
       { path: 'login', element: <Login /> },
       { path: 'register', element: <Register /> },
       { path: 'forgot-password', element: <ForgotPassword /> },
+    ]
+  },
+  {
+    path: '/admin',
+    element: <AdminLayout />,
+    errorElement: <NotFound />,
+    children: [
+      { index: true, element: <AdminDashboard /> },
+      { path: 'events', element: <ManageEvents /> },
+      { path: 'albums', element: <ManageAlbums /> },
+      { path: 'contacts', element: <ViewContacts /> },
     ]
   }
 ]);

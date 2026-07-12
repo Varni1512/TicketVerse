@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Booking } from '../types';
 import { bookingService } from '../services/bookingService';
-import { getCurrentUser } from '../data/users';
+import { useAppStore } from '../store/useAppStore';
 import { Calendar, MapPin, Ticket as TicketIcon } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 
 export const MyBookings = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // In a real app, user would come from useAppStore
-  // For now, we mock it with getCurrentUser
-  const user = getCurrentUser();
+  const { user } = useAppStore();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   useEffect(() => {
     const fetchBookings = async () => {

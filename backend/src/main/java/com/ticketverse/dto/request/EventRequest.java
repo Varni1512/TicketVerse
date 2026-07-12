@@ -32,10 +32,11 @@ public class EventRequest {
     private String city;
 
     @NotNull(message = "Event date is required")
-    @FutureOrPresent(message = "Event date must be in the present or future")
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate eventDate;
 
     @NotNull(message = "Start time is required")
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "HH:mm")
     private LocalTime startTime;
 
     private String imageUrl;

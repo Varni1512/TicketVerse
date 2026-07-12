@@ -61,4 +61,9 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", id));
         eventRepository.delete(event);
     }
+
+    @Override
+    public List<String> getAllCategories() {
+        return eventRepository.findDistinctCategories();
+    }
 }

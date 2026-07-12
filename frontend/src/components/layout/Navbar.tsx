@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Ticket, User as UserIcon, Menu, LogOut, Sun, Moon, X } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -9,6 +9,20 @@ export const Navbar = () => {
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -45,7 +59,7 @@ export const Navbar = () => {
           <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-2"></div>
           
           {user ? (
-            <div className="relative">
+            <div className="relative" ref={dropdownRef}>
               <button 
                 onClick={() => setShowMenu(!showMenu)}
                 className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-primary-600 focus:outline-none"
@@ -62,6 +76,15 @@ export const Navbar = () => {
                     <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{user.name}</p>
                     <p className="text-xs text-slate-500 truncate">{user.email}</p>
                   </div>
+                  {user.role === 'ADMIN' && (
+                    <Link 
+                      to="/admin" 
+                      className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      onClick={() => setShowMenu(false)}
+                    >
+                      Admin Dashboard
+                    </Link>
+                  )}
                   <Link 
                     to="/my-bookings" 
                     className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -119,6 +142,9 @@ export const Navbar = () => {
                   </div>
                 </div>
                 <Link to="/my-bookings" onClick={() => setIsMobileMenuOpen(false)} className="block text-base font-medium text-slate-700 dark:text-slate-200 hover:text-primary-600 dark:hover:text-primary-400">My Bookings</Link>
+                {user.role === 'ADMIN' && (
+                  <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="block text-base font-medium text-slate-700 dark:text-slate-200 hover:text-primary-600 dark:hover:text-primary-400">Admin Dashboard</Link>
+                )}
                 <button 
                   onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
                   className="w-full text-left flex items-center text-base font-medium text-red-600 hover:text-red-700"

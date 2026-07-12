@@ -26,6 +26,14 @@ public class SeatController {
         return new ResponseEntity<>(seatResponse, HttpStatus.CREATED);
     }
 
+    // POST /api/events/{id}/seats/bulk (Admin only - bulk create seats)
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/api/events/{eventId}/seats/bulk")
+    public ResponseEntity<List<SeatResponse>> createSeatsBulk(@PathVariable Long eventId, @Valid @RequestBody List<SeatRequest> seatRequests) {
+        List<SeatResponse> seatResponses = seatService.createSeatsBulk(eventId, seatRequests);
+        return new ResponseEntity<>(seatResponses, HttpStatus.CREATED);
+    }
+
     // GET /api/events/{id}/seats (Public/User)
     @GetMapping("/api/events/{eventId}/seats")
     public ResponseEntity<List<SeatResponse>> getSeatsByEvent(@PathVariable Long eventId) {

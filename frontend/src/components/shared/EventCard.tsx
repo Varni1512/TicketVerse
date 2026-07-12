@@ -30,17 +30,17 @@ export const EventCard = ({ event }: EventCardProps) => {
               {event.title}
             </h3>
             <span className="font-bold text-slate-900 dark:text-white shrink-0 bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-md text-sm border border-slate-100 dark:border-slate-800">
-              ${event.price}
+              ₹{event.price ?? '--'}
             </span>
           </div>
           
           <div className="mt-auto space-y-2 pt-4 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
               <Calendar className="h-4 w-4 mr-2 shrink-0" />
-              <span>{new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+              <span>{event.eventDate ? new Date(event.eventDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'TBD'}</span>
               <span className="mx-2">•</span>
               <Clock className="h-4 w-4 mr-2 shrink-0" />
-              <span>{event.time}</span>
+              <span>{event.startTime || event.time || 'TBD'}</span>
             </div>
             
             <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">

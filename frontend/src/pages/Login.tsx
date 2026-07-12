@@ -4,23 +4,66 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Ticket, Eye, EyeOff } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { getCurrentUser } from '../data/users';
+import api from '../services/api';
 
 export const Login = () => {
   const navigate = useNavigate();
   const login = useAppStore(state => state.login);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      login(getCurrentUser()); // Mock login with default user
-      setLoading(false);
+    setError('');
+    
+    // Clear any old/invalid token from local storage that might cause a 401 Unauthorized
+    localStorage.removeItem('token');
+
+    try {
+      const response = await api.post('/auth/login', { email, password });
+      const { accessToken, role } = response.data;
+      
+      // Save token to localStorage
+      localStorage.setItem('token', accessToken);
+      
+      // Update global state with user (constructing a basic user object)
+      login({
+        id: email, // Using email as unique ID since backend doesn't return ID yet
+        name: email.split('@')[0], 
+        email: email,
+        avatar: 'https://ui-avatars.com/api/?name=' + email.split('@')[0],
+        role: role,
+      });
+      
       navigate('/');
-    }, 1000);
+    } catch (err: any) {
+      console.error("Login error:", err);
+      let errorMsg = 'Failed to login. Please check credentials.';
+      
+      if (err.response?.data) {
+        if (err.response.data.message) {
+          errorMsg = err.response.data.message;
+        } else if (typeof err.response.data === 'string') {
+          errorMsg = err.response.data;
+        } else if (typeof err.response.data === 'object') {
+          const validationErrors = Object.values(err.response.data).join(', ');
+          if (validationErrors) {
+            errorMsg = validationErrors;
+          }
+        }
+      } else if (err.message) {
+        errorMsg = `Network/Browser Error: ${err.message}. Please check if backend is running on port 8080.`;
+      }
+      
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -38,16 +81,35 @@ export const Login = () => {
             Sign in to access your tickets and bookings.
           </p>
         </div>
+        
+        {error && (
+          <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm text-center">
+            {error}
+          </div>
+        )}
+
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email address</label>
-              <Input type="email" required placeholder="example@gmail.com" />
+              <Input 
+                type="email" 
+                required 
+                placeholder="example@gmail.com" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
               <div className="relative">
-                <Input type={showPassword ? "text" : "password"} required placeholder="••••••••" />
+                <Input 
+                  type={showPassword ? "text" : "password"} 
+                  required 
+                  placeholder="••••••••" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
@@ -96,3 +158,4 @@ export const Login = () => {
     </div>
   );
 };
+

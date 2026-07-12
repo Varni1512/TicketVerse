@@ -2,6 +2,7 @@ package com.ticketverse.controller;
 
 import com.ticketverse.dto.request.EventRequest;
 import com.ticketverse.dto.response.EventResponse;
+import com.ticketverse.service.CloudinaryService;
 import com.ticketverse.service.EventService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -18,6 +20,7 @@ import java.util.List;
 public class EventController {
 
     private final EventService eventService;
+    private final CloudinaryService cloudinaryService;
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
@@ -26,9 +29,25 @@ public class EventController {
         return new ResponseEntity<>(eventResponse, HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/upload-image")
+    public ResponseEntity<String> uploadImage(@RequestParam("image") MultipartFile image) {
+        try {
+            String imageUrl = cloudinaryService.uploadImage(image);
+            return ResponseEntity.ok(imageUrl);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload image");
+        }
+    }
+
     @GetMapping
     public ResponseEntity<List<EventResponse>> getAllEvents() {
         return ResponseEntity.ok(eventService.getAllEvents());
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<List<String>> getAllCategories() {
+        return ResponseEntity.ok(eventService.getAllCategories());
     }
 
     @GetMapping("/{id}")

@@ -1,51 +1,43 @@
 import { Event, EventCategory } from '../types';
-import { mockEvents, mockCategories, mockCities } from '../data/events';
-import { getSeatsForEvent } from '../data/seats';
-
-// Simulate network delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+import { api } from './api';
 
 export const eventService = {
   getEvents: async (): Promise<Event[]> => {
-    await delay(500);
-    return mockEvents;
+    const response = await api.get('/events');
+    return response.data;
   },
 
   getEventById: async (id: string): Promise<Event | undefined> => {
-    await delay(300);
-    return mockEvents.find(e => e.id === id);
+    const response = await api.get(`/events/${id}`);
+    return response.data;
   },
 
   getCategories: async (): Promise<EventCategory[]> => {
-    await delay(200);
-    return mockCategories;
+    const response = await api.get('/events/categories');
+    return response.data;
   },
 
   getCities: async (): Promise<string[]> => {
-    await delay(200);
-    return mockCities;
+    // The backend doesn't have an explicit /cities endpoint yet, 
+    // so we'll fetch events and extract unique cities as a fallback.
+    const response = await api.get('/events');
+    const events: Event[] = response.data;
+    const cities = new Set(events.map(e => e.city));
+    return Array.from(cities).filter(Boolean);
   },
 
   getSeats: async (eventId: string) => {
-    await delay(400);
-    return getSeatsForEvent(eventId);
+    const response = await api.get(`/events/${eventId}/seats`);
+    return response.data.map((seat: any) => ({
+      ...seat,
+      row: seat.rowNum,
+      number: seat.seatNumber,
+      tier: seat.type ? seat.type.toLowerCase() : 'regular'
+    }));
   },
 
   reserveSeats: async (eventId: string, seatIds: string[]) => {
-    await delay(600);
-    const seats = getSeatsForEvent(eventId);
-    // Check availability
-    const seatsToBook = seats.filter(s => seatIds.includes(s.id));
-    if (seatsToBook.some(s => s.status !== 'available')) {
-      throw new Error('One or more seats are no longer available');
-    }
-
-    // Update status
-    seats.forEach(s => {
-      if (seatIds.includes(s.id)) {
-        s.status = 'booked';
-      }
-    });
-    return { success: true };
+    const response = await api.post(`/bookings`, { eventId, seatIds }); 
+    return { success: true, data: response.data };
   }
 };
