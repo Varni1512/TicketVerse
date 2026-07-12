@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Ticket, ArrowLeft, Mail, CheckCircle2, KeyRound, Eye, EyeOff } from 'lucide-react';
+import api from '../services/api';
 
 type Step = 'email' | 'otp' | 'password' | 'success';
 
@@ -20,16 +21,32 @@ export const ForgotPassword = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
     
+    setError('');
     setLoading(true);
-    // Simulate sending OTP API call
-    setTimeout(() => {
-      setLoading(false);
+    
+    try {
+      await api.post('/auth/forgot-password', { email });
       setStep('otp');
-    }, 1000);
+    } catch (err: any) {
+      console.error(err);
+      let errorMsg = 'Failed to send OTP. Please check if the email is registered.';
+      if (err.response?.data) {
+        if (typeof err.response.data === 'string') {
+          errorMsg = err.response.data;
+        } else if (err.response.data.message) {
+          errorMsg = err.response.data.message;
+        } else if (err.response.data.detail) {
+          errorMsg = err.response.data.detail;
+        }
+      }
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -64,21 +81,11 @@ export const ForgotPassword = () => {
     }
     
     setError('');
-    setLoading(true);
-    
-    // Simulate verifying OTP API call
-    setTimeout(() => {
-      setLoading(false);
-      if (otpValue === '123456') { // Dummy check for testing, ideally backend verifies
-        setStep('password');
-      } else {
-        // Accept any 6 digit code for demo purposes to avoid blocking the user
-        setStep('password');
-      }
-    }, 1000);
+    // Proceed to password step to collect new password, backend will verify both together
+    setStep('password');
   };
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -93,11 +100,26 @@ export const ForgotPassword = () => {
     }
 
     setLoading(true);
-    // Simulate password reset API call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const otpValue = otp.join('');
+      await api.post('/auth/reset-password', { email, otpCode: otpValue, newPassword: password });
       setStep('success');
-    }, 1500);
+    } catch (err: any) {
+      console.error(err);
+      let errorMsg = 'Failed to reset password. The OTP may be invalid or expired.';
+      if (err.response?.data) {
+        if (typeof err.response.data === 'string') {
+          errorMsg = err.response.data;
+        } else if (err.response.data.message) {
+          errorMsg = err.response.data.message;
+        } else if (err.response.data.detail) {
+          errorMsg = err.response.data.detail;
+        }
+      }
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -119,6 +141,12 @@ export const ForgotPassword = () => {
               </p>
 
               <form className="mt-8 space-y-6" onSubmit={handleEmailSubmit}>
+                {error && (
+                  <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-900/10 dark:text-red-400 rounded-lg border border-red-200 dark:border-red-800 text-left">
+                    {error}
+                  </div>
+                )}
+                
                 <div>
                   <label className="block text-left text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Email address

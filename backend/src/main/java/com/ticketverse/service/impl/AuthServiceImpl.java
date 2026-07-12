@@ -26,6 +26,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final com.ticketverse.service.OtpService otpService;
 
     @Override
     public String register(RegisterDto registerDto) {
@@ -65,5 +66,27 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
 
         return new JwtAuthResponse(token, "Bearer", user.getRole().name());
+    }
+    
+    @Override
+    public void forgotPassword(String email) {
+        if (!userRepository.existsByEmail(email)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "User not found with this email");
+        }
+        
+        otpService.generateAndSendOtp(email);
+    }
+
+    @Override
+    public void resetPassword(com.ticketverse.dto.request.ResetPasswordRequest request) {
+        if (!otpService.verifyOtp(request.getEmail(), request.getOtpCode())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid or expired OTP");
+        }
+        
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+                
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }

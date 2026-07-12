@@ -7,4 +7,7 @@ import com.ticketverse.dto.response.JwtAuthResponse;
 public interface AuthService {
     String register(RegisterDto registerDto);
     JwtAuthResponse login(LoginDto loginDto);
+    
+    void forgotPassword(String email);
+    void resetPassword(com.ticketverse.dto.request.ResetPasswordRequest request);
 }
