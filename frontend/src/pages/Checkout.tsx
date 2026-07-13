@@ -9,7 +9,7 @@ import { CreditCard, Calendar, Lock } from 'lucide-react';
 export const Checkout = () => {
   const { cart, clearCart } = useAppStore();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
   
   const [cardName, setCardName] = useState('');
   const [cardNumber, setCardNumber] = useState('');

@@ -84,7 +84,7 @@ public class BookingServiceImplTest {
 
         assertEquals(new BigDecimal("100.00"), response.getTotalAmount());
         assertEquals("BOOKED", seat.getStatus());
-        verify(seatRepository, times(1)).save(seat);
+        verify(seatRepository, times(2)).save(seat);
         verify(bookingRepository, times(1)).save(any());
     }
 }

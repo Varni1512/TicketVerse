@@ -60,7 +60,7 @@ export const BookingSuccess = () => {
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-1 flex items-center"><Calendar className="h-4 w-4 mr-1"/> Date & Time</p>
               <p className="font-semibold text-slate-900 dark:text-white">
-                {booking.event.eventDate ? new Date(booking.event.eventDate).toLocaleDateString() : 'TBD'} at {booking.event.startTime || booking.event.time || 'TBD'}
+                {booking.event.eventDate ? new Date(booking.event.eventDate).toLocaleDateString() : 'TBD'} at {booking.event.time || 'TBD'}
               </p>
             </div>
             <div>

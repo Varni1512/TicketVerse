@@ -6,7 +6,7 @@ export const bookingService = {
     await api.post('/bookings/send-otp');
   },
 
-  createBooking: async (eventId: string, seatIds: string[], totalPrice: number, otpCode: string): Promise<Booking> => {
+  createBooking: async (eventId: string, seatIds: string[], _totalPrice: number, otpCode: string): Promise<Booking> => {
     const response = await api.post('/bookings', { eventId, seatIds, otpCode });
     return response.data;
   },

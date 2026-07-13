@@ -70,7 +70,7 @@ export const EventDetails = () => {
             <div className="flex flex-wrap items-center gap-6 text-slate-200">
               <div className="flex items-center"><MapPin className="mr-2 h-5 w-5 text-primary-400" />{event.venue}, {event.city}</div>
               <div className="flex items-center"><Calendar className="mr-2 h-5 w-5 text-primary-400" />{event.eventDate ? new Date(event.eventDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'TBD'}</div>
-              <div className="flex items-center"><Clock className="mr-2 h-5 w-5 text-primary-400" />{event.startTime || event.time || 'TBD'}</div>
+              <div className="flex items-center"><Clock className="mr-2 h-5 w-5 text-primary-400" />{event.time || 'TBD'}</div>
             </div>
           </div>
         </div>

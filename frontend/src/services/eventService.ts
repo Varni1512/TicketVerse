@@ -13,7 +13,7 @@ export const eventService = {
           const seats = seatsRes.data;
           const prices = seats.map((s: any) => s.price);
           const minPrice = prices.length > 0 ? Math.min(...prices) : undefined;
-          return { ...event, price: minPrice };
+          return { ...event, price: minPrice || 0 };
         } catch (e) {
           return event;
         }

@@ -85,7 +85,7 @@ export const MyBookings = () => {
                   <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400 mt-4">
                     <div className="flex items-center">
                       <Calendar className="mr-2 h-4 w-4 text-slate-400" />
-                      {booking.event.eventDate || booking.event.date ? new Date(booking.event.eventDate || booking.event.date).toLocaleDateString() : 'TBD'} at {booking.event.startTime || booking.event.time || 'TBD'}
+                      {booking.event.eventDate || booking.event.date ? new Date(booking.event.eventDate || booking.event.date).toLocaleDateString() : 'TBD'} at {booking.event.time || 'TBD'}
                     </div>
                     <div className="flex items-center">
                       <MapPin className="mr-2 h-4 w-4 text-slate-400" />
@@ -131,7 +131,7 @@ export const MyBookings = () => {
                                 <p class="ref">Booking ID: #${booking.id}</p>
                               </div>
                               <div class="details">
-                                <div class="row"><span class="label">Date & Time</span><span class="value">${booking.event.eventDate || booking.event.date ? new Date(booking.event.eventDate || booking.event.date).toLocaleDateString() : 'TBD'} at ${booking.event.startTime || booking.event.time || 'TBD'}</span></div>
+                                <div class="row"><span class="label">Date & Time</span><span class="value">${booking.event.eventDate || booking.event.date ? new Date(booking.event.eventDate || booking.event.date).toLocaleDateString() : 'TBD'} at ${booking.event.time || 'TBD'}</span></div>
                                 <div class="row"><span class="label">Venue</span><span class="value">${booking.event.venue}, ${booking.event.city}</span></div>
                                 <div class="row"><span class="label">Seats</span><span class="value">${booking.seats && booking.seats.length > 0 ? booking.seats.map(s => s.row + s.number).join(', ') : 'Not assigned'}</span></div>
                                 <div class="row"><span class="label">Amount Paid</span><span class="value">₹${booking.totalPrice.toFixed(2)}</span></div>

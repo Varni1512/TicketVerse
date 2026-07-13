@@ -40,7 +40,7 @@ export const EventCard = ({ event }: EventCardProps) => {
               <span>{event.eventDate ? new Date(event.eventDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'TBD'}</span>
               <span className="mx-2">•</span>
               <Clock className="h-4 w-4 mr-2 shrink-0" />
-              <span>{event.startTime || event.time || 'TBD'}</span>
+              <span>{event.time || 'TBD'}</span>
             </div>
             
             <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">

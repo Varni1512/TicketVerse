@@ -67,7 +67,7 @@ export const ManageEvents = () => {
     }
   };
 
-  const handleEdit = (event: Event) => {
+  const handleEdit = (_event: Event) => {
     alert('Edit functionality coming soon! For now, please delete and recreate the event.');
   };
 
