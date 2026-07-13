@@ -94,17 +94,17 @@ export const SeatSelection = () => {
         {/* Seat Map */}
         <div className="flex-1 overflow-x-auto bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           
-          <div className="w-full max-w-3xl mx-auto mb-16">
-            <div className="h-12 bg-gradient-to-b from-slate-200 to-transparent dark:from-slate-800 border-t-4 border-slate-300 dark:border-slate-600 rounded-t-[50%] flex items-center justify-center">
-              <span className="text-slate-500 dark:text-slate-400 font-medium text-sm tracking-widest uppercase">Stage</span>
+          <div className="flex flex-col gap-4 items-center min-w-max pb-8 px-4">
+            <div className="w-full mb-12">
+              <div className="h-12 bg-gradient-to-b from-slate-200 to-transparent dark:from-slate-800 border-t-4 border-slate-300 dark:border-slate-600 rounded-t-[50%] flex items-center justify-center">
+                <span className="text-slate-500 dark:text-slate-400 font-medium text-sm tracking-widest uppercase">Stage</span>
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-col gap-4 items-center min-w-max pb-8">
             {Object.keys(rows).sort().map(rowStr => (
-              <div key={rowStr} className="flex items-center gap-4">
-                <div className="w-6 text-center font-bold text-slate-400">{rowStr}</div>
-                <div className="flex gap-2">
+              <div key={rowStr} className="flex items-center gap-4 w-full">
+                <div className="w-8 sticky left-0 bg-white dark:bg-slate-900 z-10 flex items-center justify-center font-bold text-slate-400 py-1">{rowStr}</div>
+                <div className="flex gap-2 flex-1 justify-center">
                   {rows[rowStr].sort((a, b) => a.number - b.number).map(seat => (
                     <button
                       key={seat.id}
@@ -112,7 +112,7 @@ export const SeatSelection = () => {
                       disabled={seat.status === 'booked'}
                       title={`${seat.tier.toUpperCase()} - ₹${seat.price}`}
                       className={`
-                        w-8 h-8 md:w-10 md:h-10 rounded-t-lg rounded-b-sm border-b-4 transition-all duration-200 flex items-center justify-center text-xs font-medium
+                        w-8 h-8 md:w-10 md:h-10 flex-shrink-0 rounded-t-lg rounded-b-sm border-b-4 transition-all duration-200 flex items-center justify-center text-xs font-medium
                         ${getSeatColor(seat)}
                       `}
                     >
@@ -120,7 +120,7 @@ export const SeatSelection = () => {
                     </button>
                   ))}
                 </div>
-                <div className="w-6 text-center font-bold text-slate-400">{rowStr}</div>
+                <div className="w-8 sticky right-0 bg-white dark:bg-slate-900 z-10 flex items-center justify-center font-bold text-slate-400 py-1">{rowStr}</div>
               </div>
             ))}
           </div>
