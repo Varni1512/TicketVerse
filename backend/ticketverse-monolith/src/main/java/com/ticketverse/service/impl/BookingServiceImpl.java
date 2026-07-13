@@ -5,14 +5,13 @@ import com.ticketverse.dto.response.BookingResponse;
 import com.ticketverse.entity.Booking;
 import com.ticketverse.entity.Event;
 import com.ticketverse.entity.Seat;
-import com.ticketverse.entity.User;
+
 import com.ticketverse.exception.ApiException;
 import com.ticketverse.exception.ResourceNotFoundException;
 import com.ticketverse.mapper.BookingMapper;
 import com.ticketverse.repository.BookingRepository;
 import com.ticketverse.repository.EventRepository;
 import com.ticketverse.repository.SeatRepository;
-import com.ticketverse.repository.UserRepository;
 import com.ticketverse.service.BookingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,15 +30,12 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final EventRepository eventRepository;
     private final SeatRepository seatRepository;
-    private final UserRepository userRepository;
+
     private final BookingMapper bookingMapper;
 
     @Override
     @Transactional
     public BookingResponse createBooking(BookingRequest bookingRequest, String userEmail) {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", 0));
-
         Event event = eventRepository.findById(bookingRequest.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", bookingRequest.getEventId()));
 
@@ -70,7 +66,7 @@ public class BookingServiceImpl implements BookingService {
                 .bookingReference(UUID.randomUUID().toString())
                 .totalAmount(totalAmount)
                 .bookingStatus("CONFIRMED")
-                .user(user)
+                .userEmail(userEmail)
                 .event(event)
                 .build();
 
@@ -96,10 +92,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public List<BookingResponse> getUserBookings(String userEmail) {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", 0));
-
-        return bookingRepository.findByUserId(user.getId()).stream()
+        return bookingRepository.findByUserEmail(userEmail).stream()
                 .map(bookingMapper::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -110,7 +103,7 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
         
         // Ensure user can only view their own booking
-        if (!booking.getUser().getEmail().equals(userEmail)) {
+        if (!booking.getUserEmail().equals(userEmail)) {
             // Check if admin (optional, for now just restrict)
             // throw new ApiException(HttpStatus.FORBIDDEN, "Access denied");
         }
@@ -124,7 +117,7 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
 
-        if (!booking.getUser().getEmail().equals(userEmail)) {
+        if (!booking.getUserEmail().equals(userEmail)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "You do not have permission to cancel this booking");
         }
 

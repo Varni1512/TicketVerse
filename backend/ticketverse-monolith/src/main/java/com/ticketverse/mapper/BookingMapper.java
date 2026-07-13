@@ -16,7 +16,7 @@ public class BookingMapper {
                 .totalAmount(booking.getTotalAmount())
                 .bookingStatus(booking.getBookingStatus())
                 .eventId(booking.getEvent().getId())
-                .userId(booking.getUser().getId())
+
                 .seats(booking.getSeats() != null ? booking.getSeats().stream().map(seat -> SeatResponse.builder()
                         .id(seat.getId())
                         .rowNum(seat.getRowNum())

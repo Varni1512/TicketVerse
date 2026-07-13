@@ -1,0 +1,42 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: ticketverse-auth-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ticketverse_auth}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:varni1505@gmail.com}
+    password: ${MAIL_PASSWORD:cqsvstlbkmopkosj}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+app:
+  jwt-secret: c2VjcmV0LWtleS1mb3ItdGlja2V0dmVyc2UtYXBwbGljYXRpb24tc2hvdWxkLWJlLWxvbmctZW5vdWdo
+  jwt-expiration-milliseconds: 604800000
+
+logging:
+  level:
+    com.ticketverse: DEBUG
+    org.springframework.security: DEBUG
