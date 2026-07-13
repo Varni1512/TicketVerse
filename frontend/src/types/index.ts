@@ -15,6 +15,9 @@ export interface Event {
   organizer: string;
   rating: number;
   eventDate?: string;
+  startTime?: string;
+  status?: string;
+  createdAt?: string;
 }
 
 export interface User {

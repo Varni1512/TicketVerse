@@ -22,7 +22,9 @@ public class EventResponse {
     private String category;
     private String venue;
     private String city;
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate eventDate;
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "HH:mm:ss")
     private LocalTime startTime;
     private String imageUrl;
     private String status;

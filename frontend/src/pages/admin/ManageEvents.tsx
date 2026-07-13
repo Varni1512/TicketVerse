@@ -12,6 +12,7 @@ export const ManageEvents = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -33,7 +34,9 @@ export const ManageEvents = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   const [seats, setSeats] = useState<SeatDefinition[]>([]);
+  const [existingSeats, setExistingSeats] = useState<SeatDefinition[]>([]);
   const [step, setStep] = useState<1 | 2>(1);
+  const [submitAction, setSubmitAction] = useState<'update' | 'next'>('next');
 
   const fetchEvents = async () => {
     setEventsLoading(true);
@@ -67,8 +70,83 @@ export const ManageEvents = () => {
     }
   };
 
-  const handleEdit = (_event: Event) => {
-    alert('Edit functionality coming soon! For now, please delete and recreate the event.');
+  const handleEdit = (event: Event) => {
+    setEditingEventId(event.id);
+    
+    const eventDate = event.eventDate || '';
+    const startTimeStr = event.startTime || '20:00';
+    const startTime = startTimeStr.substring(0, 5);
+
+    setEventData({
+      title: event.title || '',
+      description: event.description || '',
+      category: event.category || '',
+      venue: event.venue || '',
+      city: event.city || '',
+      eventDate: eventDate,
+      startTime: startTime,
+      imageUrl: event.imageUrl || '',
+      status: event.status || 'UPCOMING'
+    });
+    setStep(1);
+    setIsFormOpen(true);
+  };
+
+  const handleUpdateEvent = async () => {
+    if (!editingEventId) return;
+    setLoading(true);
+    try {
+      let uploadedImageUrl = eventData.imageUrl;
+      
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        
+        const uploadRes = await api.post('/events/upload-image', formData);
+        uploadedImageUrl = typeof uploadRes.data === 'string' ? uploadRes.data : uploadRes.data.url;
+      }
+
+      const eventPayload = { ...eventData, imageUrl: uploadedImageUrl };
+      await api.put(`/events/${editingEventId}`, eventPayload);
+      
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        setIsFormOpen(false);
+        setEditingEventId(null);
+        fetchEvents();
+        
+        setEventData({
+          title: '', description: '', category: '', venue: '', city: '', 
+          eventDate: '', startTime: '20:00', imageUrl: '', status: 'UPCOMING'
+        });
+        setImageFile(null);
+      }, 2000);
+      
+    } catch (error: any) {
+      console.error("Failed to update event", error);
+      alert(`Failed to update event. Please try again.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNextToSeating = async () => {
+    if (editingEventId) {
+      setLoading(true);
+      try {
+        const res = await api.get(`/events/${editingEventId}/seats`);
+        setExistingSeats(res.data);
+        setStep(2);
+      } catch (error) {
+        console.error("Failed to fetch seats", error);
+        alert("Failed to load existing seating layout.");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setStep(2);
+    }
   };
 
   const handleCreateEventAndSeats = async () => {
@@ -90,15 +168,29 @@ export const ManageEvents = () => {
       }
 
       const eventPayload = { ...eventData, imageUrl: uploadedImageUrl };
-      const eventRes = await api.post('/events', eventPayload);
-      const eventId = eventRes.data.id;
-
-      await api.post(`/events/${eventId}/seats/bulk`, seats);
+      
+      let eventId = editingEventId;
+      if (editingEventId) {
+        await api.put(`/events/${editingEventId}`, eventPayload);
+        
+        const newSeats = seats.filter(newSeat => {
+          return !existingSeats.some(ex => ex.rowNum === newSeat.rowNum && ex.seatNumber === newSeat.seatNumber);
+        });
+        
+        if (newSeats.length > 0) {
+          await api.post(`/events/${eventId}/seats/bulk`, newSeats);
+        }
+      } else {
+        const eventRes = await api.post('/events', eventPayload);
+        eventId = eventRes.data.id;
+        await api.post(`/events/${eventId}/seats/bulk`, seats);
+      }
       
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
         setIsFormOpen(false); // Close form
+        setEditingEventId(null);
         fetchEvents(); // Refresh list
         
         // Reset form
@@ -108,15 +200,16 @@ export const ManageEvents = () => {
           eventDate: '', startTime: '20:00', imageUrl: '', status: 'UPCOMING'
         });
         setSeats([]);
+        setExistingSeats([]);
         setImageFile(null);
         setVipPrice(150);
         setRegularPrice(50);
       }, 2000);
       
     } catch (error: any) {
-      console.error("Failed to create event or seats", error, error.response?.data);
+      console.error("Failed to save event or seats", error, error.response?.data);
       const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
-      alert(`Failed to create event. Details: ${errorMsg}. Please try again.`);
+      alert(`Failed to save event. Details: ${errorMsg}. Please try again.`);
     } finally {
       setLoading(false);
     }
@@ -135,9 +228,15 @@ export const ManageEvents = () => {
         
         {isFormOpen && (
           <div className="flex gap-2">
-             <div className={`px-4 py-2 rounded-full text-sm font-medium ${step === 1 ? 'bg-primary-600 text-white' : 'bg-slate-200 text-slate-500'}`}>1. Details</div>
-             <div className={`px-4 py-2 rounded-full text-sm font-medium ${step === 2 ? 'bg-primary-600 text-white' : 'bg-slate-200 text-slate-500'}`}>2. Seating</div>
-             <Button variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
+             {!editingEventId ? (
+               <>
+                 <div className={`px-4 py-2 rounded-full text-sm font-medium ${step === 1 ? 'bg-primary-600 text-white' : 'bg-slate-200 text-slate-500'}`}>1. Details</div>
+                 <div className={`px-4 py-2 rounded-full text-sm font-medium ${step === 2 ? 'bg-primary-600 text-white' : 'bg-slate-200 text-slate-500'}`}>2. Seating</div>
+               </>
+             ) : (
+                 <div className="px-4 py-2 rounded-full text-sm font-medium bg-primary-600 text-white">Edit Details</div>
+             )}
+             <Button variant="outline" onClick={() => { setIsFormOpen(false); setEditingEventId(null); }}>Cancel</Button>
           </div>
         )}
       </div>
@@ -186,7 +285,14 @@ export const ManageEvents = () => {
         <>
           {step === 1 && (
             <Card className="p-6 animate-fade-in">
-              <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); setStep(2); }}>
+              <form className="space-y-6" onSubmit={(e) => { 
+                e.preventDefault(); 
+                if (submitAction === 'update') {
+                  handleUpdateEvent();
+                } else {
+                  handleNextToSeating();
+                }
+              }}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="col-span-2">
                     <Input label="Event Title" name="title" value={eventData.title} onChange={handleChange} required />
@@ -253,8 +359,15 @@ export const ManageEvents = () => {
                   <Input label="Start Time" type="time" name="startTime" value={eventData.startTime} onChange={handleChange} required />
                 </div>
 
-                <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800">
-                   <Button type="submit">Next: Build Seating Layout</Button>
+                <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800 gap-4">
+                   {editingEventId && (
+                     <Button type="submit" variant="outline" onClick={() => setSubmitAction('update')} disabled={loading}>
+                       Update Details Only
+                     </Button>
+                   )}
+                   <Button type="submit" onClick={() => setSubmitAction('next')} disabled={loading}>
+                     {editingEventId ? 'Next: Add More Seats' : 'Next: Build Seating Layout'}
+                   </Button>
                 </div>
               </form>
             </Card>
@@ -264,7 +377,7 @@ export const ManageEvents = () => {
             <Card className="p-6 animate-fade-in">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">Interactive Seat Builder</h3>
               
-              <SeatBuilder onSave={(savedSeats) => setSeats(savedSeats)} vipPrice={vipPrice} regularPrice={regularPrice} />
+              <SeatBuilder onSave={(savedSeats) => setSeats(savedSeats)} vipPrice={vipPrice} regularPrice={regularPrice} initialSeats={existingSeats} />
 
               <div className="mt-8 flex justify-between items-center pt-6 border-t border-slate-200 dark:border-slate-800">
                 <Button variant="outline" onClick={() => setStep(1)}>Back to Details</Button>
@@ -279,7 +392,7 @@ export const ManageEvents = () => {
                     onClick={handleCreateEventAndSeats} 
                     disabled={loading || seats.length === 0}
                   >
-                    {loading ? 'Creating...' : 'Publish Event'}
+                    {loading ? 'Saving...' : editingEventId ? 'Save Updates' : 'Publish Event'}
                   </Button>
                 </div>
               </div>

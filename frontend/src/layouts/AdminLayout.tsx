@@ -15,6 +15,16 @@ export const AdminLayout = () => {
     }
   }, [user, navigate]);
 
+  // Apply dark mode
+  const theme = useAppStore(state => state.theme);
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
   if (!user || user.role !== 'ADMIN') return null;
 
   const handleLogout = () => {

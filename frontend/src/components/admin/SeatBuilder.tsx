@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../ui/Button';
 
 export type SeatType = 'AVAILABLE' | 'VIP' | 'UNAVAILABLE';
@@ -15,9 +15,10 @@ interface SeatBuilderProps {
   onSave: (seats: SeatDefinition[]) => void;
   vipPrice: number;
   regularPrice: number;
+  initialSeats?: SeatDefinition[];
 }
 
-export const SeatBuilder = ({ onSave, vipPrice, regularPrice }: SeatBuilderProps) => {
+export const SeatBuilder = ({ onSave, vipPrice, regularPrice, initialSeats }: SeatBuilderProps) => {
   const [rows, setRows] = useState(10);
   const [cols, setCols] = useState(15);
   
@@ -27,6 +28,32 @@ export const SeatBuilder = ({ onSave, vipPrice, regularPrice }: SeatBuilderProps
   // Paint tool selected
   const [selectedTool, setSelectedTool] = useState<SeatType>('AVAILABLE');
   const [isMouseDown, setIsMouseDown] = useState(false);
+
+  useEffect(() => {
+    if (initialSeats && initialSeats.length > 0) {
+      const config: Record<string, SeatType> = {};
+      let maxRow = 10;
+      let maxCol = 15;
+      
+      initialSeats.forEach(seat => {
+        let rowIndex = 0;
+        for (let i = 0; i < seat.rowNum.length; i++) {
+          rowIndex = rowIndex * 26 + (seat.rowNum.charCodeAt(i) - 64);
+        }
+        rowIndex -= 1;
+        
+        const colIndex = seat.seatNumber - 1;
+        config[`${rowIndex}-${colIndex}`] = seat.type;
+        
+        if (rowIndex + 1 > maxRow) maxRow = rowIndex + 1;
+        if (colIndex + 1 > maxCol) maxCol = colIndex + 1;
+      });
+      
+      setSeatConfig(config);
+      setRows(maxRow);
+      setCols(maxCol);
+    }
+  }, [initialSeats]);
 
   const getRowLabel = (index: number) => {
     // A, B, C... Z, AA, AB etc.
