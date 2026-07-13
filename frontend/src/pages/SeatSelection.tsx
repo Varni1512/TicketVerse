@@ -120,7 +120,6 @@ export const SeatSelection = () => {
                     </button>
                   ))}
                 </div>
-                <div className="w-8 sticky right-0 bg-white dark:bg-slate-900 z-10 flex items-center justify-center font-bold text-slate-400 py-1">{rowStr}</div>
               </div>
             ))}
           </div>
