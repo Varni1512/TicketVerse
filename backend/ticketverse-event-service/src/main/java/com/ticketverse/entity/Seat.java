@@ -37,7 +37,6 @@ public class Seat {
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booking_id")
-    private Booking booking;
+    @Column(name = "booking_id")
+    private Long bookingId;
 }

@@ -42,12 +42,29 @@ public class SeatServiceImpl implements SeatService {
     }
 
     @Override
+    public List<SeatResponse> getSeatsByBookingId(Long bookingId) {
+        return seatRepository.findByBookingId(bookingId).stream()
+                .map(seatMapper::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public SeatResponse updateSeat(Long id, SeatRequest seatRequest) {
         Seat seat = seatRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Seat", "id", id));
         
         seatMapper.updateEntity(seat, seatRequest);
+        Seat updatedSeat = seatRepository.save(seat);
+        return seatMapper.mapToResponse(updatedSeat);
+    }
+
+    @Override
+    public SeatResponse updateSeatStatus(Long id, String status, Long bookingId) {
+        Seat seat = seatRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Seat", "id", id));
+        seat.setStatus(status);
+        seat.setBookingId(bookingId);
         Seat updatedSeat = seatRepository.save(seat);
         return seatMapper.mapToResponse(updatedSeat);
     }

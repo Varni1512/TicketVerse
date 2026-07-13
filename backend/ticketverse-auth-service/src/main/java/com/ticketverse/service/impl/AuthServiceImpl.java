@@ -60,10 +60,10 @@ public class AuthServiceImpl implements AuthService {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        String token = jwtTokenProvider.generateToken(authentication);
-
         User user = userRepository.findByEmail(loginDto.getEmail())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+
+        String token = jwtTokenProvider.generateToken(authentication, user.getId());
 
         return new JwtAuthResponse(token, "Bearer", user.getRole().name());
     }

@@ -2,6 +2,7 @@ package com.ticketverse.controller;
 
 import com.ticketverse.dto.request.BookingRequest;
 import com.ticketverse.dto.response.BookingResponse;
+import com.ticketverse.security.JwtTokenProvider;
 import com.ticketverse.service.BookingService;
 import com.ticketverse.service.OtpService;
 import jakarta.validation.Valid;
@@ -20,6 +21,7 @@ public class BookingController {
 
     private final BookingService bookingService;
     private final OtpService otpService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/send-otp")
     public ResponseEntity<String> sendOtp(Authentication authentication) {
@@ -29,7 +31,7 @@ public class BookingController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createBooking(@Valid @RequestBody BookingRequest bookingRequest, Authentication authentication) {
+    public ResponseEntity<?> createBooking(@Valid @RequestBody BookingRequest bookingRequest, Authentication authentication, @RequestHeader("Authorization") String token) {
         String userEmail = authentication.getName();
         
         // Verify OTP
@@ -39,7 +41,8 @@ public class BookingController {
         }
         
         try {
-            BookingResponse bookingResponse = bookingService.createBooking(bookingRequest, userEmail);
+            Long userId = jwtTokenProvider.getUserId(token.substring(7));
+            BookingResponse bookingResponse = bookingService.createBooking(bookingRequest, userId);
             return new ResponseEntity<>(bookingResponse, HttpStatus.CREATED);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -47,23 +50,22 @@ public class BookingController {
     }
 
     @GetMapping
-    public ResponseEntity<List<BookingResponse>> getBookings(Authentication authentication) {
-        // Here we could check if user is admin to return all bookings, else return only user's bookings.
-        String userEmail = authentication.getName();
-        // Assuming user gets only their bookings for simplicity
-        return ResponseEntity.ok(bookingService.getUserBookings(userEmail));
+    public ResponseEntity<List<BookingResponse>> getBookings(Authentication authentication, @RequestHeader("Authorization") String token) {
+        Long userId = jwtTokenProvider.getUserId(token.substring(7));
+        return ResponseEntity.ok(bookingService.getUserBookings(userId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BookingResponse> getBookingById(@PathVariable Long id, Authentication authentication) {
-        String userEmail = authentication.getName();
-        return ResponseEntity.ok(bookingService.getBookingById(id, userEmail));
+    public ResponseEntity<BookingResponse> getBookingById(@PathVariable Long id, @RequestHeader("Authorization") String token) {
+        Long userId = jwtTokenProvider.getUserId(token.substring(7));
+        // Note: getBookingById currently takes userEmail in BookingService interface, I need to fix it.
+        return ResponseEntity.ok(bookingService.getBookingById(id, userId));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> cancelBooking(@PathVariable Long id, Authentication authentication) {
-        String userEmail = authentication.getName();
-        bookingService.cancelBooking(id, userEmail);
+    public ResponseEntity<String> cancelBooking(@PathVariable Long id, @RequestHeader("Authorization") String token) {
+        Long userId = jwtTokenProvider.getUserId(token.substring(7));
+        bookingService.cancelBooking(id, userId);
         return ResponseEntity.ok("Booking cancelled successfully!");
     }
 }

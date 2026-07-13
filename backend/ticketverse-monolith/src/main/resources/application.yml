@@ -38,7 +38,7 @@ spring:
     baseline-on-migrate: true
 
 server:
-  port: ${PORT:8080}
+  port: ${PORT:8083}
 
 logging:
   level:

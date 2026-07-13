@@ -29,7 +29,7 @@ spring:
         - id: event-service
           uri: http://localhost:8082
           predicates:
-            - Path=/api/events/**, /api/albums/**, /api/seats/**
+            - Path=/api/events/**, /api/seats/**, /api/albums/**
         - id: booking-service
           uri: http://localhost:8083
           predicates:

@@ -36,8 +36,13 @@ public class SeatController {
 
     // GET /api/events/{id}/seats (Public/User)
     @GetMapping("/api/events/{eventId}/seats")
-    public ResponseEntity<List<SeatResponse>> getSeatsByEvent(@PathVariable Long eventId) {
+    public ResponseEntity<List<SeatResponse>> getSeatsByEventId(@PathVariable Long eventId) {
         return ResponseEntity.ok(seatService.getSeatsByEventId(eventId));
+    }
+
+    @GetMapping("/api/seats/booking/{bookingId}")
+    public ResponseEntity<List<SeatResponse>> getSeatsByBookingId(@PathVariable Long bookingId) {
+        return ResponseEntity.ok(seatService.getSeatsByBookingId(bookingId));
     }
 
     // PUT /api/seats/{id} (Admin only - or maybe user for status update during booking? Usually booking has its own logic)
@@ -45,6 +50,14 @@ public class SeatController {
     @PutMapping("/api/seats/{id}")
     public ResponseEntity<SeatResponse> updateSeat(@PathVariable Long id, @Valid @RequestBody SeatRequest seatRequest) {
         return ResponseEntity.ok(seatService.updateSeat(id, seatRequest));
+    }
+
+    @PostMapping("/api/seats/{id}/status")
+    public ResponseEntity<SeatResponse> updateSeatStatus(
+            @PathVariable Long id,
+            @RequestParam String status,
+            @RequestParam(required = false) Long bookingId) {
+        return ResponseEntity.ok(seatService.updateSeatStatus(id, status, bookingId));
     }
 
     // GET /api/seats/{id} (Public/User)

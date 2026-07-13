@@ -6,10 +6,9 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @SpringBootApplication
 @EnableFeignClients
-public class TicketverseApplication {
+public class EventApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(TicketverseApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(EventApplication.class, args);
+    }
 }

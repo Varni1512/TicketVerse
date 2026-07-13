@@ -1,31 +1,38 @@
 package com.ticketverse.mapper;
 
+import com.ticketverse.client.EventServiceClient;
 import com.ticketverse.dto.response.BookingResponse;
 import com.ticketverse.dto.response.SeatResponse;
 import com.ticketverse.entity.Booking;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
+@RequiredArgsConstructor
 public class BookingMapper {
 
+    private final EventServiceClient eventServiceClient;
+
     public BookingResponse mapToResponse(Booking booking) {
+        List<SeatResponse> seats;
+        try {
+            seats = eventServiceClient.getSeatsByBookingId(booking.getId());
+        } catch (Exception e) {
+            // Fallback in case of failure
+            seats = new java.util.ArrayList<>();
+        }
+
         return BookingResponse.builder()
                 .id(booking.getId())
                 .bookingReference(booking.getBookingReference())
                 .bookingDate(booking.getBookingDate())
                 .totalAmount(booking.getTotalAmount())
                 .bookingStatus(booking.getBookingStatus())
-                .eventId(booking.getEvent().getId())
+                .eventId(booking.getEventId())
+                .seats(seats)
 
-                .seats(booking.getSeats() != null ? booking.getSeats().stream().map(seat -> SeatResponse.builder()
-                        .id(seat.getId())
-                        .rowNum(seat.getRowNum())
-                        .seatNumber(seat.getSeatNumber())
-                        .type(seat.getType())
-                        .price(seat.getPrice())
-                        .status(seat.getStatus())
-                        .eventId(seat.getEvent().getId())
-                        .build()).collect(java.util.stream.Collectors.toList()) : new java.util.ArrayList<>())
                 .build();
     }
 }

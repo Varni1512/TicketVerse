@@ -9,6 +9,8 @@ public interface SeatService {
     List<SeatResponse> getSeatsByEventId(Long eventId);
     SeatResponse getSeatById(Long id);
     SeatResponse updateSeat(Long id, SeatRequest seatRequest);
+    SeatResponse updateSeatStatus(Long id, String status, Long bookingId);
+    List<SeatResponse> getSeatsByBookingId(Long bookingId);
     // Usually admin might add seats in bulk, but let's implement basic add for now
     SeatResponse createSeat(Long eventId, SeatRequest seatRequest);
     List<SeatResponse> createSeatsBulk(Long eventId, List<SeatRequest> seatRequests);

@@ -33,14 +33,9 @@ public class Booking {
     @Column(name = "booking_status", nullable = false, length = 50)
     private String bookingStatus;
 
-    @Column(name = "user_email", nullable = false)
-    private String userEmail;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "event_id", nullable = false)
-    private Event event;
-
-    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
-    @Builder.Default
-    private java.util.List<Seat> seats = new java.util.ArrayList<>();
+    @Column(name = "event_id", nullable = false)
+    private Long eventId;
 }

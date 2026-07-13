@@ -3,15 +3,13 @@ package com.ticketverse.service.impl;
 import com.ticketverse.dto.request.BookingRequest;
 import com.ticketverse.dto.response.BookingResponse;
 import com.ticketverse.entity.Booking;
-import com.ticketverse.entity.Event;
-import com.ticketverse.entity.Seat;
-
 import com.ticketverse.exception.ApiException;
 import com.ticketverse.exception.ResourceNotFoundException;
 import com.ticketverse.mapper.BookingMapper;
 import com.ticketverse.repository.BookingRepository;
-import com.ticketverse.repository.EventRepository;
-import com.ticketverse.repository.SeatRepository;
+import com.ticketverse.client.EventServiceClient;
+import com.ticketverse.dto.response.EventResponse;
+import com.ticketverse.dto.response.SeatResponse;
 import com.ticketverse.service.BookingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,25 +26,21 @@ import java.util.stream.Collectors;
 public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
-    private final EventRepository eventRepository;
-    private final SeatRepository seatRepository;
+    private final EventServiceClient eventServiceClient;
 
     private final BookingMapper bookingMapper;
 
     @Override
     @Transactional
-    public BookingResponse createBooking(BookingRequest bookingRequest, String userEmail) {
-        Event event = eventRepository.findById(bookingRequest.getEventId())
-                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", bookingRequest.getEventId()));
+    public BookingResponse createBooking(BookingRequest bookingRequest, Long userId) {
+        EventResponse event = eventServiceClient.getEventById(bookingRequest.getEventId());
 
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        // Process seats
         for (Long seatId : bookingRequest.getSeatIds()) {
-            Seat seat = seatRepository.findById(seatId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Seat", "id", seatId));
+            SeatResponse seat = eventServiceClient.getSeatById(seatId);
 
-            if (!seat.getEvent().getId().equals(event.getId())) {
+            if (!seat.getEventId().equals(event.getId())) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "Seat does not belong to this event");
             }
 
@@ -54,10 +48,8 @@ public class BookingServiceImpl implements BookingService {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "Seat " + seat.getSeatNumber() + " is not available");
             }
 
-            // Lock seat
-            seat.setStatus("BOOKED");
-            // We will save the seat again with the booking reference later
-            seatRepository.save(seat);
+            // Lock seat temporarily without bookingId
+            eventServiceClient.updateSeatStatus(seatId, "BOOKED", null);
 
             totalAmount = totalAmount.add(seat.getPrice());
         }
@@ -66,19 +58,15 @@ public class BookingServiceImpl implements BookingService {
                 .bookingReference(UUID.randomUUID().toString())
                 .totalAmount(totalAmount)
                 .bookingStatus("CONFIRMED")
-                .userEmail(userEmail)
-                .event(event)
+                .userId(userId)
+                .eventId(event.getId())
                 .build();
 
         Booking savedBooking = bookingRepository.save(booking);
         
-        java.util.List<Seat> bookedSeats = new java.util.ArrayList<>();
         for (Long seatId : bookingRequest.getSeatIds()) {
-            Seat seat = seatRepository.findById(seatId).get();
-            seat.setBooking(savedBooking);
-            bookedSeats.add(seatRepository.save(seat));
+            eventServiceClient.updateSeatStatus(seatId, "BOOKED", savedBooking.getId());
         }
-        savedBooking.setSeats(bookedSeats);
 
         return bookingMapper.mapToResponse(savedBooking);
     }
@@ -91,19 +79,19 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingResponse> getUserBookings(String userEmail) {
-        return bookingRepository.findByUserEmail(userEmail).stream()
+    public List<BookingResponse> getUserBookings(Long userId) {
+        return bookingRepository.findByUserId(userId).stream()
                 .map(bookingMapper::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public BookingResponse getBookingById(Long id, String userEmail) {
+    public BookingResponse getBookingById(Long id, Long userId) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
         
         // Ensure user can only view their own booking
-        if (!booking.getUserEmail().equals(userEmail)) {
+        if (!booking.getUserId().equals(userId)) {
             // Check if admin (optional, for now just restrict)
             // throw new ApiException(HttpStatus.FORBIDDEN, "Access denied");
         }
@@ -113,24 +101,25 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public void cancelBooking(Long id, String userEmail) {
+    public void cancelBooking(Long id, Long userId) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
 
-        if (!booking.getUserEmail().equals(userEmail)) {
+        if (!booking.getUserId().equals(userId)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "You do not have permission to cancel this booking");
         }
 
         booking.setBookingStatus("CANCELLED");
         bookingRepository.save(booking);
         
-        // Free up the seats
-        if (booking.getSeats() != null) {
-            for (Seat seat : booking.getSeats()) {
-                seat.setStatus("AVAILABLE");
-                seat.setBooking(null);
-                seatRepository.save(seat);
-            }
+        // Wait, how do I know which seats to free? 
+        // I should fetch the seats by booking ID from the event service!
+        // But eventServiceClient doesn't have getSeatsByBookingId yet.
+        // For now, this is a limitation until we add it to event service.
+        // I will add it to the EventServiceClient.
+        java.util.List<SeatResponse> seats = eventServiceClient.getSeatsByBookingId(booking.getId());
+        for (SeatResponse seat : seats) {
+            eventServiceClient.updateSeatStatus(seat.getId(), "AVAILABLE", null);
         }
     }
 }
