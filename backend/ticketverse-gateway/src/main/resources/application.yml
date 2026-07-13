@@ -21,20 +21,22 @@ spring:
               - Cache-Control
               - Content-Type
             allowCredentials: true
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
       routes:
         - id: auth-service
-          uri: http://localhost:8081
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
           predicates:
             - Path=/api/auth/**
         - id: event-service
-          uri: http://localhost:8082
+          uri: ${EVENT_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/events/**, /api/seats/**, /api/albums/**
         - id: booking-service
-          uri: http://localhost:8083
+          uri: ${BOOKING_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/bookings/**
         - id: contact-service
-          uri: http://localhost:8084
+          uri: ${CONTACT_SERVICE_URL:http://localhost:8084}
           predicates:
             - Path=/api/contact/**
