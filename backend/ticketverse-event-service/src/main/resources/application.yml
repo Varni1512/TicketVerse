@@ -21,7 +21,7 @@ spring:
     locations: classpath:db/migration
 
 app:
-  jwt-secret: 4261656C64756E67537072696E67426F6F744A57545475746F7269616C5365637265744B6579
+  jwt-secret: ${JWT_SECRET:c2VjcmV0LWtleS1mb3ItdGlja2V0dmVyc2UtYXBwbGljYXRpb24tc2hvdWxkLWJlLWxvbmctZW5vdWdo}
   jwt-expiration-milliseconds: 604800000
 
 cloudinary:
