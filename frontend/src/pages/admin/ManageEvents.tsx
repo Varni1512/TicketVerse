@@ -42,7 +42,7 @@ export const ManageEvents = () => {
     setEventsLoading(true);
     try {
       const data = await eventService.getEvents();
-      setEvents(data);
+      setEvents(data || []);
     } catch (error) {
       console.error('Failed to fetch events', error);
     } finally {
@@ -73,8 +73,8 @@ export const ManageEvents = () => {
   const handleEdit = (event: Event) => {
     setEditingEventId(event.id);
     
-    const eventDate = event.eventDate || '';
-    const startTimeStr = event.startTime || '20:00';
+    const eventDate = Array.isArray(event.eventDate) ? `${event.eventDate[0]}-${String(event.eventDate[1]).padStart(2, '0')}-${String(event.eventDate[2]).padStart(2, '0')}` : (event.eventDate || '');
+    const startTimeStr = Array.isArray(event.startTime) ? `${String(event.startTime[0]).padStart(2, '0')}:${String(event.startTime[1]).padStart(2, '0')}` : (event.startTime || '20:00');
     const startTime = startTimeStr.substring(0, 5);
 
     setEventData({
@@ -255,14 +255,14 @@ export const ManageEvents = () => {
             <div className="p-8 text-center text-slate-500">No events found. Click "Add Event" to create one.</div>
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {events.map((event) => (
+              {events?.map((event) => (
                 <div key={event.id} className="p-4 md:p-6 flex items-center justify-between group hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                   <div className="flex items-center gap-4">
                     <img src={event.imageUrl || 'https://via.placeholder.com/100'} alt={event.title} className="w-16 h-16 rounded-lg object-cover bg-slate-200" />
                     <div>
                       <h3 className="font-bold text-slate-900 dark:text-white text-lg">{event.title}</h3>
                       <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
-                        <span className="flex items-center"><Calendar className="w-3.5 h-3.5 mr-1" /> {event.eventDate ? new Date(event.eventDate).toLocaleDateString() : 'TBD'}</span>
+                        <span className="flex items-center"><Calendar className="w-3.5 h-3.5 mr-1" /> {event.eventDate ? (Array.isArray(event.eventDate) ? new Date(event.eventDate[0], event.eventDate[1]-1, event.eventDate[2]).toLocaleDateString() : new Date(event.eventDate).toLocaleDateString()) : 'TBD'}</span>
                         <span className="flex items-center"><MapPin className="w-3.5 h-3.5 mr-1" /> {event.city}</span>
                         <span className="flex items-center"><Tag className="w-3.5 h-3.5 mr-1" /> {event.category}</span>
                       </div>

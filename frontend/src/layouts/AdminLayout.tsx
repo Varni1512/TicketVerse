@@ -16,7 +16,7 @@ export const AdminLayout = () => {
   }, [user, navigate]);
 
   // Apply dark mode
-  const theme = useAppStore(state => state.theme);
+  const { theme, toggleTheme } = useAppStore();
   useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -89,6 +89,13 @@ export const AdminLayout = () => {
             {navItems.find(i => i.path === location.pathname)?.name || 'Admin'}
           </h1>
           <div className="flex items-center gap-3">
+            <button 
+              onClick={toggleTheme} 
+              className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-2 rounded-full transition-colors mr-2"
+              aria-label="Toggle Dark Mode"
+            >
+              {theme === 'dark' ? <span className="text-xl">☀️</span> : <span className="text-xl">🌙</span>}
+            </button>
             <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
               {user.name}
             </span>

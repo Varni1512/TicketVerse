@@ -23,13 +23,12 @@
 	</properties>
 
 	<modules>
-		<module>ticketverse-monolith</module>
-        <module>ticketverse-gateway</module>
         <module>ticketverse-auth-service</module>
         <module>ticketverse-event-service</module>
         <module>ticketverse-booking-service</module>
         <module>ticketverse-contact-service</module>
-	</modules>
+        <module>ticketverse-gateway</module>
+    </modules>
 
 	<dependencyManagement>
 		<dependencies>
