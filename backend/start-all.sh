@@ -10,6 +10,9 @@ SERVICES=(
   "ticketverse-booking-service"
   "ticketverse-contact-service"
   "ticketverse-gateway"
+  "ticketverse-notification-service"
+  "ticketverse-analytics-service"
+  "ticketverse-audit-service"
 )
 
 mkdir -p logs

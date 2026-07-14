@@ -19,6 +19,7 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -34,10 +35,14 @@ public class BookingServiceImpl implements BookingService {
     private final EventServiceClient eventServiceClient;
     private final RedissonClient redissonClient;
     private final BookingMapper bookingMapper;
+    private final org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
     @Transactional
     public BookingResponse createBooking(BookingRequest bookingRequest, Long userId) {
+        String correlationId = java.util.UUID.randomUUID().toString();
+        org.slf4j.MDC.put("correlationId", correlationId);
+        
         List<Long> sortedSeatIds = bookingRequest.getSeatIds().stream()
                 .sorted()
                 .collect(Collectors.toList());
@@ -89,6 +94,22 @@ public class BookingServiceImpl implements BookingService {
                 eventServiceClient.updateSeatStatus(seatId, "BOOKED", savedBooking.getId());
             }
 
+            // 5. Publish Kafka Event
+            com.ticketverse.event.BookingCreatedPayload payload = com.ticketverse.event.BookingCreatedPayload.builder()
+                    .bookingId(savedBooking.getId())
+                    .userId(userId)
+                    .eventId(event.getId())
+                    .seatIds(sortedSeatIds)
+                    .bookingTime(LocalDateTime.now())
+                    .totalAmount(totalAmount)
+                    .status(savedBooking.getBookingStatus())
+                    .build();
+
+            com.ticketverse.event.DomainEvent<com.ticketverse.event.BookingCreatedPayload> domainEvent = 
+                    com.ticketverse.event.DomainEvent.create("BOOKING_CREATED", correlationId, "ticketverse-booking-service", payload, null);
+
+            kafkaTemplate.send("booking-created-topic", savedBooking.getId().toString(), domainEvent);
+
             return bookingMapper.mapToResponse(savedBooking);
 
         } catch (InterruptedException e) {
@@ -102,6 +123,7 @@ public class BookingServiceImpl implements BookingService {
                     lock.unlock();
                 }
             }
+            org.slf4j.MDC.clear();
         }
     }
 

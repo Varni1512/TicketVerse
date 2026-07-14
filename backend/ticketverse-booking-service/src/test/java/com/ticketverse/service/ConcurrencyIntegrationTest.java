@@ -42,7 +42,9 @@ public class ConcurrencyIntegrationTest {
         bookingMapper = mock(BookingMapper.class);
         redissonClient = mock(RedissonClient.class);
         
-        bookingService = new BookingServiceImpl(bookingRepository, eventServiceClient, redissonClient, bookingMapper);
+        org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate = mock(org.springframework.kafka.core.KafkaTemplate.class);
+        
+        bookingService = new BookingServiceImpl(bookingRepository, eventServiceClient, redissonClient, bookingMapper, kafkaTemplate);
 
         EventResponse mockEvent = new EventResponse();
         mockEvent.setId(1L);

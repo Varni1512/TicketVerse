@@ -97,3 +97,93 @@ To validate our distributed locking mechanism, we simulated high-concurrency env
 | **Total Execution Time** | ~120 ms | ~210 ms | ~450 ms |
 
 **Conclusion**: The system successfully prevented all double-bookings under extreme concurrent load, maintaining low latency and returning accurate `409 Conflict` statuses for all overlapping requests.
+
+## Phase 5: Event-Driven Architecture (Apache Kafka)
+
+In Phase 5, we completely decoupled the post-booking operations (Notifications, Analytics, and Auditing) from the core Booking Service by implementing a production-grade Event-Driven Architecture (EDA) using Apache Kafka. 
+
+### Why Event-Driven Architecture & Kafka?
+
+Instead of the Booking Service performing synchronous downstream API calls, which creates tight coupling, increases latency, and risks cascading failures if a downstream service goes offline—the Booking Service now simply produces a `BookingCreatedEvent`. 
+
+**Apache Kafka** provides high throughput, fault tolerance, and message retention. The immutable event log allows independent consumer microservices to process the events at their own pace, automatically retry on failure, and route to Dead Letter Topics (DLT) without impacting the fast, synchronous booking path.
+
+### Updated Architecture Diagram
+
+```mermaid
+graph TD
+    Client[Client Apps] --> AG[API Gateway :8080]
+    AG --> BS[Booking Service :8083]
+    
+    subgraph Event Broker
+        BS -- Publishes BookingCreatedEvent --> Kafka((Apache Kafka))
+    end
+    
+    subgraph Consumers
+        Kafka -- Consumes --> NS[Notification Service :8085]
+        Kafka -- Consumes --> AS[Analytics Service :8086]
+        Kafka -- Consumes --> AuS[Audit Service :8087]
+    end
+    
+    subgraph Persistence Layer
+        BS --> DB_B[(Booking DB)]
+        NS --> DB_N[(Notification Schema)]
+        AS --> DB_A[(Analytics Schema)]
+        AuS --> DB_Au[(Audit Schema)]
+    end
+```
+
+### Kafka Topic Architecture & Consumer Groups
+
+```mermaid
+graph LR
+    P[Booking Producer] -->|Publish| T(booking-created-topic)
+    
+    T -->|Group: notification-group| CG1[Notification Consumer]
+    T -->|Group: analytics-group| CG2[Analytics Consumer]
+    T -->|Group: audit-group| CG3[Audit Consumer]
+    
+    CG1 -.->|Max Retries Exceeded| DLT1(notification-failed-dlt)
+```
+
+### Retry and DLQ Flow Diagram
+
+To ensure absolute resilience, consumers utilize an Exponential Backoff Retry policy.
+
+```mermaid
+sequenceDiagram
+    participant Kafka
+    participant Consumer
+    participant DLT
+
+    Kafka->>Consumer: Deliver Event
+    Consumer-->>Consumer: Attempt Processing
+    alt Processing Fails (Exception)
+        Consumer-->>Consumer: Wait 1s (Backoff)
+        Consumer-->>Consumer: Retry Attempt 1
+        Consumer-->>Consumer: Wait 2s (Backoff)
+        Consumer-->>Consumer: Retry Attempt 2
+        Consumer-->>Consumer: Wait 4s (Backoff)
+        Consumer-->>Consumer: Retry Attempt 3
+        Consumer->>DLT: Publish to Dead Letter Topic
+    else Processing Succeeds
+        Consumer->>Kafka: Commit Offset
+    end
+```
+
+### Idempotency & Exactly-Once Semantics
+
+Kafka guarantees at-least-once delivery. To prevent duplicate notifications or skewed analytics on redelivery, every consumer uses an **Idempotent Consumer Pattern**.
+
+When an event arrives, the consumer queries its local `ProcessedEvent` table using the unique `eventId`. If the ID exists, the event is immediately discarded. If it doesn't, the business logic executes and the `eventId` is persisted in the same transaction as the business operation, ensuring **Exactly-Once Semantics**.
+
+### Observability
+
+Every domain event carries a `correlationId`. This ID is injected into the SLF4J MDC (Mapped Diagnostic Context) of every consumer upon reception. This guarantees distributed tracing across all logs in the cluster, making it trivial to track a single booking request across the API Gateway, Booking Service, Notification, Analytics, and Audit systems.
+
+### Verification Report
+
+- [x] **Zero Direct API Calls**: The Booking Service was refactored. `NotificationService` HTTP calls were completely replaced by the `KafkaTemplate`.
+- [x] **Fault Tolerance**: The system was tested by shutting down the Notification Service, producing booking events, and confirming they were queued in Kafka and successfully delivered when the service came back online.
+- [x] **Backward Compatibility**: The existing Frontend UI remains completely unchanged; the REST response from the Booking Service returns identically, but much faster.
+- [x] **Retry & DLT Logic**: Simulated transient failures proved the 3x exponential backoff and successful routing to the `-dlt` topic.

@@ -10,11 +10,14 @@ SERVICES=(
   "ticketverse-booking-service"
   "ticketverse-contact-service"
   "ticketverse-gateway"
+  "ticketverse-notification-service"
+  "ticketverse-analytics-service"
+  "ticketverse-audit-service"
 )
 
 echo "🛑 Stopping TicketVerse Microservices..."
 
-PORTS=(8080 8081 8082 8083 8084)
+PORTS=(8080 8081 8082 8083 8084 8085 8086 8087)
 
 for PORT in "${PORTS[@]}"; do
   PID=$(lsof -ti:$PORT)

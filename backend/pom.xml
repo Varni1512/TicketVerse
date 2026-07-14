@@ -29,6 +29,9 @@
         <module>ticketverse-booking-service</module>
         <module>ticketverse-contact-service</module>
         <module>ticketverse-gateway</module>
+        <module>ticketverse-notification-service</module>
+        <module>ticketverse-analytics-service</module>
+        <module>ticketverse-audit-service</module>
     </modules>
 
 	<dependencyManagement>
