@@ -1,14 +1,37 @@
 import { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
-import { Users, Calendar, Ticket as TicketIcon } from 'lucide-react';
+import { Users, Calendar, Ticket as TicketIcon, IndianRupee, Layers } from 'lucide-react';
 import { api } from '../../services/api';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 export const AdminDashboard = () => {
   const [stats, setStats] = useState({
     events: 0,
-    bookings: 0,
     messages: 0
   });
+  
+  const [liveStats, setLiveStats] = useState({
+    totalBookings: 0,
+    totalRevenue: 0,
+    totalSeatsSold: 0
+  });
+  
+  const { connected, subscribe } = useWebSocket();
+
+  useEffect(() => {
+    if (connected) {
+      const unsub = subscribe('/topic/dashboard', (msg) => {
+        if (msg.payload) {
+          setLiveStats({
+            totalBookings: msg.payload.totalBookings || 0,
+            totalRevenue: msg.payload.totalRevenue || 0,
+            totalSeatsSold: msg.payload.totalSeatsSold || 0
+          });
+        }
+      });
+      return () => unsub();
+    }
+  }, [connected, subscribe]);
 
   useEffect(() => {
     // In a real app, this would hit an aggregate endpoint.
@@ -22,7 +45,6 @@ export const AdminDashboard = () => {
         
         setStats({
           events: eventsRes.data.length,
-          bookings: 120, // Dummy data for bookings since we don't have get all bookings endpoint for admin yet
           messages: contactsRes.data.length
         });
       } catch (error) {
@@ -53,8 +75,28 @@ export const AdminDashboard = () => {
             <TicketIcon className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Bookings</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.bookings}</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Bookings Today <span className="text-xs text-green-500 ml-1 animate-pulse">● Live</span></p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{liveStats.totalBookings}</p>
+          </div>
+        </Card>
+
+        <Card className="p-6 flex items-center gap-4 border-l-4 border-l-amber-500">
+          <div className="h-12 w-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+            <IndianRupee className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Revenue Today <span className="text-xs text-green-500 ml-1 animate-pulse">● Live</span></p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">₹{liveStats.totalRevenue}</p>
+          </div>
+        </Card>
+        
+        <Card className="p-6 flex items-center gap-4 border-l-4 border-l-purple-500">
+          <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
+            <Layers className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Seats Sold Today <span className="text-xs text-green-500 ml-1 animate-pulse">● Live</span></p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{liveStats.totalSeatsSold}</p>
           </div>
         </Card>
 

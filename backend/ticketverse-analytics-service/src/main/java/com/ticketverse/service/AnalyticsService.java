@@ -19,6 +19,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import org.springframework.kafka.core.KafkaTemplate;
+import java.util.UUID;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -27,6 +30,7 @@ public class AnalyticsService {
     private final ProcessedEventRepository processedEventRepository;
     private final AnalyticsRecordRepository analyticsRecordRepository;
     private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @KafkaListener(topics = "booking-created-topic", groupId = "analytics-group")
     @Transactional
@@ -71,6 +75,18 @@ public class AnalyticsService {
             processedEventRepository.save(processedEvent);
 
             log.info("Analytics updated for date {}: {} total bookings today.", today, record.getTotalBookings());
+            
+            // 4. Publish Real-time Dashboard Metrics Event
+            com.ticketverse.event.DashboardMetricsPayload metricsPayload = com.ticketverse.event.DashboardMetricsPayload.builder()
+                    .totalBookings(record.getTotalBookings())
+                    .totalRevenue(record.getTotalRevenue())
+                    .totalSeatsSold(record.getTotalSeatsSold())
+                    .build();
+                    
+            DomainEvent<com.ticketverse.event.DashboardMetricsPayload> dashboardEvent = 
+                    DomainEvent.create("DASHBOARD_METRICS_UPDATED", event.getCorrelationId(), "ticketverse-analytics-service", metricsPayload, null);
+                    
+            kafkaTemplate.send("dashboard-metrics-topic", "GLOBAL_STATS", dashboardEvent);
 
         } catch (Exception e) {
             log.error("Error processing message in analytics service: {}", e.getMessage());

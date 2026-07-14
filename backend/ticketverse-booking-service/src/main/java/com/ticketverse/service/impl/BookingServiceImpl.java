@@ -47,6 +47,7 @@ public class BookingServiceImpl implements BookingService {
                 .sorted()
                 .collect(Collectors.toList());
         List<RLock> acquiredLocks = new ArrayList<>();
+        boolean bookingSuccessful = false;
 
         try {
             // 1. Acquire Redis Locks for all requested seats
@@ -57,6 +58,17 @@ public class BookingServiceImpl implements BookingService {
                     throw new ApiException(HttpStatus.CONFLICT, "Seat " + seatId + " is currently being booked by another user");
                 }
                 acquiredLocks.add(lock);
+                
+                // Publish SeatLockedEvent
+                com.ticketverse.event.SeatLockedPayload lockedPayload = com.ticketverse.event.SeatLockedPayload.builder()
+                        .eventId(bookingRequest.getEventId())
+                        .seatId(seatId)
+                        .userId(userId)
+                        .remainingLockTimeSeconds(60L)
+                        .build();
+                com.ticketverse.event.DomainEvent<com.ticketverse.event.SeatLockedPayload> lockedEvent = 
+                        com.ticketverse.event.DomainEvent.create("SEAT_LOCKED", correlationId, "ticketverse-booking-service", lockedPayload, null);
+                kafkaTemplate.send("seat-events-topic", bookingRequest.getEventId().toString(), lockedEvent);
             }
 
             // 2. Fetch Event and Verify Seats
@@ -89,10 +101,7 @@ public class BookingServiceImpl implements BookingService {
 
             Booking savedBooking = bookingRepository.save(booking);
             
-            // 4. Update Seat Status in Event Service
-            for (Long seatId : sortedSeatIds) {
-                eventServiceClient.updateSeatStatus(seatId, "BOOKED", savedBooking.getId());
-            }
+            // 4. (Removed Synchronous REST Call) Seat Status is now updated asynchronously via Event Service consuming BookingCreatedEvent.
 
             // 5. Publish Kafka Event
             com.ticketverse.event.BookingCreatedPayload payload = com.ticketverse.event.BookingCreatedPayload.builder()
@@ -108,8 +117,10 @@ public class BookingServiceImpl implements BookingService {
             com.ticketverse.event.DomainEvent<com.ticketverse.event.BookingCreatedPayload> domainEvent = 
                     com.ticketverse.event.DomainEvent.create("BOOKING_CREATED", correlationId, "ticketverse-booking-service", payload, null);
 
-            kafkaTemplate.send("booking-created-topic", savedBooking.getId().toString(), domainEvent);
+            // Publish using eventId as the key to guarantee correct event ordering
+            kafkaTemplate.send("booking-created-topic", event.getId().toString(), domainEvent);
 
+            bookingSuccessful = true;
             return bookingMapper.mapToResponse(savedBooking);
 
         } catch (InterruptedException e) {
@@ -121,6 +132,18 @@ public class BookingServiceImpl implements BookingService {
                 RLock lock = acquiredLocks.get(i);
                 if (lock != null && lock.isHeldByCurrentThread()) {
                     lock.unlock();
+                }
+            }
+            // If booking failed, publish SeatUnlockedEvent explicitly so WebSocket clients instantly see it available
+            if (!bookingSuccessful) {
+                for (Long seatId : sortedSeatIds) {
+                    com.ticketverse.event.SeatUnlockedPayload unlockedPayload = com.ticketverse.event.SeatUnlockedPayload.builder()
+                            .eventId(bookingRequest.getEventId())
+                            .seatId(seatId)
+                            .build();
+                    com.ticketverse.event.DomainEvent<com.ticketverse.event.SeatUnlockedPayload> unlockedEvent = 
+                            com.ticketverse.event.DomainEvent.create("SEAT_UNLOCKED", correlationId, "ticketverse-booking-service", unlockedPayload, null);
+                    kafkaTemplate.send("seat-events-topic", bookingRequest.getEventId().toString(), unlockedEvent);
                 }
             }
             org.slf4j.MDC.clear();
@@ -168,14 +191,15 @@ public class BookingServiceImpl implements BookingService {
         booking.setBookingStatus("CANCELLED");
         bookingRepository.save(booking);
         
-        // Wait, how do I know which seats to free? 
-        // I should fetch the seats by booking ID from the event service!
-        // But eventServiceClient doesn't have getSeatsByBookingId yet.
-        // For now, this is a limitation until we add it to event service.
-        // I will add it to the EventServiceClient.
-        java.util.List<SeatResponse> seats = eventServiceClient.getSeatsByBookingId(booking.getId());
-        for (SeatResponse seat : seats) {
-            eventServiceClient.updateSeatStatus(seat.getId(), "AVAILABLE", null);
-        }
+        // Publish BookingCancelledEvent for WebSockets and Event Service
+        com.ticketverse.event.BookingCancelledPayload payload = com.ticketverse.event.BookingCancelledPayload.builder()
+                .bookingId(booking.getId())
+                .eventId(booking.getEventId())
+                .build();
+        
+        com.ticketverse.event.DomainEvent<com.ticketverse.event.BookingCancelledPayload> domainEvent = 
+                com.ticketverse.event.DomainEvent.create("BOOKING_CANCELLED", UUID.randomUUID().toString(), "ticketverse-booking-service", payload, null);
+        
+        kafkaTemplate.send("booking-created-topic", booking.getEventId().toString(), domainEvent);
     }
 }
