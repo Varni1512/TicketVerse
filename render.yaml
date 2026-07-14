@@ -1,0 +1,121 @@
+services:
+  - type: web
+    name: ticketverse-auth-service
+    env: docker
+    healthCheckPath: /actuator/health
+
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    dockerCommand: java -jar auth.jar
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+
+  - type: web
+    name: ticketverse-event-service
+    env: docker
+    healthCheckPath: /actuator/health
+
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    dockerCommand: java -jar event.jar
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+  - type: web
+    name: ticketverse-booking-service
+    env: docker
+    healthCheckPath: /actuator/health
+
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    dockerCommand: java -jar booking.jar
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: EVENT_SERVICE_URL
+        value: http://ticketverse-event-service:8080
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+
+  - type: web
+    name: ticketverse-contact-service
+    env: docker
+    healthCheckPath: /actuator/health
+
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    dockerCommand: java -jar contact.jar
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+
+  - type: web
+    name: ticketverse-gateway
+    env: docker
+    healthCheckPath: /actuator/health
+
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    dockerCommand: java -jar gateway.jar
+    envVars:
+      - key: PORT
+        value: 8080
+      # Internal URLs for Gateway to route to the other services securely
+      - key: AUTH_SERVICE_URL
+        value: http://ticketverse-auth-service:8080
+      - key: EVENT_SERVICE_URL
+        value: http://ticketverse-event-service:8080
+      - key: BOOKING_SERVICE_URL
+        value: http://ticketverse-booking-service:8080
+      - key: CONTACT_SERVICE_URL
+        value: http://ticketverse-contact-service:8080
