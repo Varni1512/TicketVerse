@@ -13,6 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 
 @Slf4j
 @Service
@@ -22,6 +25,14 @@ public class KafkaWebSocketConsumer {
     private final ObjectMapper objectMapper;
     private final SimpMessagingTemplate messagingTemplate;
     private final SeatRepository seatRepository;
+    private final MeterRegistry meterRegistry;
+    
+    private Counter broadcastRateCounter;
+
+    @PostConstruct
+    public void initMetrics() {
+        this.broadcastRateCounter = meterRegistry.counter("business.websocket.broadcast.total");
+    }
 
     @KafkaListener(topics = "seat-events-topic", groupId = "event-service-group")
     public void consumeSeatEvent(String message) {
@@ -38,6 +49,7 @@ public class KafkaWebSocketConsumer {
                 // Broadcast to WebSockets
                 String destination = "/topic/events/" + payload.getEventId() + "/seats";
                 messagingTemplate.convertAndSend(destination, event);
+                broadcastRateCounter.increment();
                 log.info("Broadcasted SEAT_LOCKED for seat {} to {}", payload.getSeatId(), destination);
                 
             } else if ("SEAT_UNLOCKED".equals(eventType)) {
@@ -47,6 +59,7 @@ public class KafkaWebSocketConsumer {
                 // Broadcast to WebSockets
                 String destination = "/topic/events/" + payload.getEventId() + "/seats";
                 messagingTemplate.convertAndSend(destination, event);
+                broadcastRateCounter.increment();
                 log.info("Broadcasted SEAT_UNLOCKED for seat {} to {}", payload.getSeatId(), destination);
             }
         } catch (Exception e) {
@@ -84,6 +97,7 @@ public class KafkaWebSocketConsumer {
                     );
                     String destination = "/topic/events/" + payload.getEventId() + "/seats";
                     messagingTemplate.convertAndSend(destination, wsEvent);
+                    broadcastRateCounter.increment();
                 }
                 log.info("Processed BOOKING_CREATED and broadcasted SEAT_BOOKED for booking {}", payload.getBookingId());
 
@@ -107,6 +121,7 @@ public class KafkaWebSocketConsumer {
                     );
                     String destination = "/topic/events/" + payload.getEventId() + "/seats";
                     messagingTemplate.convertAndSend(destination, wsEvent);
+                    broadcastRateCounter.increment();
                 }
                 seatRepository.saveAll(seats);
                 log.info("Processed BOOKING_CANCELLED and freed seats for booking {}", payload.getBookingId());
@@ -122,6 +137,7 @@ public class KafkaWebSocketConsumer {
         try {
             DomainEvent<DashboardMetricsPayload> event = objectMapper.readValue(message, new TypeReference<>() {});
             messagingTemplate.convertAndSend("/topic/dashboard", event);
+            broadcastRateCounter.increment();
             log.debug("Broadcasted DASHBOARD_METRICS_UPDATED");
         } catch (Exception e) {
             log.error("Failed to process dashboard-metrics-topic message: {}", e.getMessage(), e);

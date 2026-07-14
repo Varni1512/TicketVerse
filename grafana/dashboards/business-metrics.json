@@ -1,0 +1,56 @@
+{
+  "title": "TicketVerse Business Metrics",
+  "timezone": "browser",
+  "refresh": "5s",
+  "schemaVersion": 36,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Total Bookings",
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum(business_bookings_total_total)", "legendFormat": "Total Bookings" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Successful Bookings",
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        { "expr": "sum(business_bookings_success_total)", "legendFormat": "Success" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Failed Bookings",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "sum(business_bookings_failed_total)", "legendFormat": "Failed" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Total Revenue",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        { "expr": "sum(business_revenue_total_total)", "legendFormat": "Revenue" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Connected WebSocket Clients",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "sum(business_websocket_clients)", "legendFormat": "Clients" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Broadcast Rate",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "rate(business_websocket_broadcast_total_total[1m])", "legendFormat": "Broadcasts / sec" }
+      ]
+    }
+  ]
+}

@@ -45,3 +45,46 @@ logging:
 app:
   jwt-secret: ${JWT_SECRET:c2VjcmV0LWtleS1mb3ItdGlja2V0dmVyc2UtYXBwbGljYXRpb24tc2hvdWxkLWJlLWxvbmctZW5vdWdo_default_local_dev_key}
   jwt-expiration-milliseconds: 604800000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  tracing:
+    sampling:
+      probability: 1.0
+
+logging:
+  level:
+    com.ticketverse: INFO
+
+management:
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+
+resilience4j.circuitbreaker:
+  instances:
+    eventService:
+      registerHealthIndicator: true
+      slidingWindowSize: 10
+      permittedNumberOfCallsInHalfOpenState: 3
+      waitDurationInOpenState: 5s
+      failureRateThreshold: 50
+resilience4j.retry:
+  instances:
+    eventService:
+      maxRetryAttempts: 3
+      waitDuration: 500ms

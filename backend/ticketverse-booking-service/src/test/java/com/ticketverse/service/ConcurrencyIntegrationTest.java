@@ -43,8 +43,9 @@ public class ConcurrencyIntegrationTest {
         redissonClient = mock(RedissonClient.class);
         
         org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate = mock(org.springframework.kafka.core.KafkaTemplate.class);
+        io.micrometer.core.instrument.MeterRegistry meterRegistry = new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
         
-        bookingService = new BookingServiceImpl(bookingRepository, eventServiceClient, redissonClient, bookingMapper, kafkaTemplate);
+        bookingService = new BookingServiceImpl(bookingRepository, eventServiceClient, redissonClient, bookingMapper, kafkaTemplate, meterRegistry);
 
         EventResponse mockEvent = new EventResponse();
         mockEvent.setId(1L);

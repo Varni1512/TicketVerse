@@ -11,7 +11,11 @@ import com.ticketverse.client.EventServiceClient;
 import com.ticketverse.dto.response.EventResponse;
 import com.ticketverse.dto.response.SeatResponse;
 import com.ticketverse.service.BookingService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,10 +40,31 @@ public class BookingServiceImpl implements BookingService {
     private final RedissonClient redissonClient;
     private final BookingMapper bookingMapper;
     private final org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
+    private final MeterRegistry meterRegistry;
+
+    private Counter bookingsTotal;
+    private Counter bookingsSuccess;
+    private Counter bookingsFailed;
+    private Counter revenueTotal;
+    private Counter seatLockCount;
+    private Counter lockTimeoutCount;
+    private Timer lockWaitTime;
+
+    @PostConstruct
+    public void initMetrics() {
+        this.bookingsTotal = meterRegistry.counter("business.bookings.total");
+        this.bookingsSuccess = meterRegistry.counter("business.bookings.success");
+        this.bookingsFailed = meterRegistry.counter("business.bookings.failed");
+        this.revenueTotal = meterRegistry.counter("business.revenue.total");
+        this.seatLockCount = meterRegistry.counter("business.seat.locks.total");
+        this.lockTimeoutCount = meterRegistry.counter("business.seat.locks.timeout");
+        this.lockWaitTime = meterRegistry.timer("business.seat.locks.wait_time");
+    }
 
     @Override
     @Transactional
     public BookingResponse createBooking(BookingRequest bookingRequest, Long userId) {
+        bookingsTotal.increment();
         String correlationId = java.util.UUID.randomUUID().toString();
         org.slf4j.MDC.put("correlationId", correlationId);
         
@@ -52,9 +77,15 @@ public class BookingServiceImpl implements BookingService {
         try {
             // 1. Acquire Redis Locks for all requested seats
             for (Long seatId : sortedSeatIds) {
+                seatLockCount.increment();
                 RLock lock = redissonClient.getLock("seat_lock:" + seatId);
+                
+                long startTime = System.nanoTime();
                 boolean isLocked = lock.tryLock(5, 60, TimeUnit.SECONDS);
+                lockWaitTime.record(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
+                
                 if (!isLocked) {
+                    lockTimeoutCount.increment();
                     throw new ApiException(HttpStatus.CONFLICT, "Seat " + seatId + " is currently being booked by another user");
                 }
                 acquiredLocks.add(lock);
@@ -117,10 +148,11 @@ public class BookingServiceImpl implements BookingService {
             com.ticketverse.event.DomainEvent<com.ticketverse.event.BookingCreatedPayload> domainEvent = 
                     com.ticketverse.event.DomainEvent.create("BOOKING_CREATED", correlationId, "ticketverse-booking-service", payload, null);
 
-            // Publish using eventId as the key to guarantee correct event ordering
             kafkaTemplate.send("booking-created-topic", event.getId().toString(), domainEvent);
 
             bookingSuccessful = true;
+            bookingsSuccess.increment();
+            revenueTotal.increment(totalAmount.doubleValue());
             return bookingMapper.mapToResponse(savedBooking);
 
         } catch (InterruptedException e) {
@@ -136,6 +168,7 @@ public class BookingServiceImpl implements BookingService {
             }
             // If booking failed, publish SeatUnlockedEvent explicitly so WebSocket clients instantly see it available
             if (!bookingSuccessful) {
+                bookingsFailed.increment();
                 for (Long seatId : sortedSeatIds) {
                     com.ticketverse.event.SeatUnlockedPayload unlockedPayload = com.ticketverse.event.SeatUnlockedPayload.builder()
                             .eventId(bookingRequest.getEventId())

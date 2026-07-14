@@ -35,6 +35,43 @@ services:
       - kafka_data:/var/lib/kafka/data
     restart: always
 
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: ticketverse-zipkin
+    ports:
+      - "9411:9411"
+    restart: always
+
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    container_name: ticketverse-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: always
+
+  grafana:
+    image: grafana/grafana:10.4.1
+    container_name: ticketverse-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    restart: always
+
 volumes:
   redis_data:
   kafka_data:
+  prometheus_data:
+  grafana_data:

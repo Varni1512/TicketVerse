@@ -15,6 +15,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.security.Principal;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import java.util.concurrent.atomic.AtomicInteger;
+import jakarta.annotation.PostConstruct;
 
 @Slf4j
 @Component
@@ -23,6 +27,16 @@ public class WebSocketEventListener {
 
     private final StringRedisTemplate redisTemplate;
     private final SimpMessagingTemplate messagingTemplate;
+    private final MeterRegistry meterRegistry;
+    
+    private final AtomicInteger connectedClients = new AtomicInteger(0);
+
+    @PostConstruct
+    public void initMetrics() {
+        Gauge.builder("business.websocket.clients", connectedClients, AtomicInteger::get)
+             .description("Number of connected WebSocket clients")
+             .register(meterRegistry);
+    }
     
     private static final Pattern TOPIC_PATTERN = Pattern.compile("/topic/events/(\\d+)/.*");
 
@@ -31,6 +45,8 @@ public class WebSocketEventListener {
         SimpMessageHeaderAccessor headers = SimpMessageHeaderAccessor.wrap(event.getMessage());
         String destination = headers.getDestination();
         String sessionId = headers.getSessionId();
+        
+        connectedClients.incrementAndGet();
 
         if (destination != null) {
             Matcher matcher = TOPIC_PATTERN.matcher(destination);
@@ -57,6 +73,8 @@ public class WebSocketEventListener {
     public void handleSessionDisconnectEvent(SessionDisconnectEvent event) {
         SimpMessageHeaderAccessor headers = SimpMessageHeaderAccessor.wrap(event.getMessage());
         String sessionId = headers.getSessionId();
+        
+        connectedClients.decrementAndGet();
         
         if (headers.getSessionAttributes() != null && headers.getSessionAttributes().containsKey("eventId")) {
             Long eventId = (Long) headers.getSessionAttributes().get("eventId");

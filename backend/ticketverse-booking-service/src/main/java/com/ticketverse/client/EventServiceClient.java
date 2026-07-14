@@ -8,7 +8,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+
 @FeignClient(name = "event-service", url = "${event.service.url:http://localhost:8082}")
+@CircuitBreaker(name = "eventService")
+@Retry(name = "eventService")
 public interface EventServiceClient {
 
     @GetMapping("/api/events/{id}")
