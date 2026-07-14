@@ -58,7 +58,7 @@ You can run the entire TicketVerse ecosystem (8 Microservices, 1 Frontend, Kafka
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/TicketVerse.git
+   git clone https://github.com/Varni1512/TicketVerse.git
    cd TicketVerse
    ```
 2. **Setup Environment Variables**
