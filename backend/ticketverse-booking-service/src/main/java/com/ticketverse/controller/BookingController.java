@@ -40,13 +40,9 @@ public class BookingController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid OTP or OTP expired");
         }
         
-        try {
-            Long userId = jwtTokenProvider.getUserId(token.substring(7));
-            BookingResponse bookingResponse = bookingService.createBooking(bookingRequest, userId);
-            return new ResponseEntity<>(bookingResponse, HttpStatus.CREATED);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        }
+        Long userId = jwtTokenProvider.getUserId(token.substring(7));
+        BookingResponse bookingResponse = bookingService.createBooking(bookingRequest, userId);
+        return new ResponseEntity<>(bookingResponse, HttpStatus.CREATED);
     }
 
     @GetMapping

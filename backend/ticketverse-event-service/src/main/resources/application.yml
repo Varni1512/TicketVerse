@@ -2,6 +2,11 @@ server:
   port: ${PORT:8082}
 
 spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:ticketverse_redis_secret}
   application:
     name: ticketverse-event-service
   datasource:

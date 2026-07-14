@@ -10,6 +10,8 @@ import com.ticketverse.repository.EventRepository;
 import com.ticketverse.repository.SeatRepository;
 import com.ticketverse.service.SeatService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,7 @@ public class SeatServiceImpl implements SeatService {
     private final SeatMapper seatMapper;
 
     @Override
+    @Cacheable(value = "seats", key = "#eventId")
     public List<SeatResponse> getSeatsByEventId(Long eventId) {
         if (!eventRepository.existsById(eventId)) {
             throw new ResourceNotFoundException("Event", "id", eventId);
@@ -35,6 +38,7 @@ public class SeatServiceImpl implements SeatService {
     }
 
     @Override
+    @Cacheable(value = "seats", key = "'seat_' + #id")
     public SeatResponse getSeatById(Long id) {
         Seat seat = seatRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Seat", "id", id));
@@ -50,6 +54,7 @@ public class SeatServiceImpl implements SeatService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "seats", allEntries = true)
     public SeatResponse updateSeat(Long id, SeatRequest seatRequest) {
         Seat seat = seatRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Seat", "id", id));
@@ -60,6 +65,7 @@ public class SeatServiceImpl implements SeatService {
     }
 
     @Override
+    @CacheEvict(value = "seats", allEntries = true)
     public SeatResponse updateSeatStatus(Long id, String status, Long bookingId) {
         Seat seat = seatRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Seat", "id", id));

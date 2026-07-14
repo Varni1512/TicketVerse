@@ -8,6 +8,8 @@ import com.ticketverse.mapper.EventMapper;
 import com.ticketverse.repository.EventRepository;
 import com.ticketverse.service.EventService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    @Cacheable(value = "events", key = "'event_' + #id")
     public EventResponse getEventById(Long id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", id));
@@ -45,6 +48,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "events", key = "'event_' + #id")
     public EventResponse updateEvent(Long id, EventRequest eventRequest) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", id));
@@ -56,6 +60,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "events", key = "'event_' + #id")
     public void deleteEvent(Long id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", id));

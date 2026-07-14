@@ -15,10 +15,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,48 +32,77 @@ public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
     private final EventServiceClient eventServiceClient;
-
+    private final RedissonClient redissonClient;
     private final BookingMapper bookingMapper;
 
     @Override
     @Transactional
     public BookingResponse createBooking(BookingRequest bookingRequest, Long userId) {
-        EventResponse event = eventServiceClient.getEventById(bookingRequest.getEventId());
+        List<Long> sortedSeatIds = bookingRequest.getSeatIds().stream()
+                .sorted()
+                .collect(Collectors.toList());
+        List<RLock> acquiredLocks = new ArrayList<>();
 
-        BigDecimal totalAmount = BigDecimal.ZERO;
-
-        for (Long seatId : bookingRequest.getSeatIds()) {
-            SeatResponse seat = eventServiceClient.getSeatById(seatId);
-
-            if (!seat.getEventId().equals(event.getId())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "Seat does not belong to this event");
+        try {
+            // 1. Acquire Redis Locks for all requested seats
+            for (Long seatId : sortedSeatIds) {
+                RLock lock = redissonClient.getLock("seat_lock:" + seatId);
+                boolean isLocked = lock.tryLock(5, 60, TimeUnit.SECONDS);
+                if (!isLocked) {
+                    throw new ApiException(HttpStatus.CONFLICT, "Seat " + seatId + " is currently being booked by another user");
+                }
+                acquiredLocks.add(lock);
             }
 
-            if (!"AVAILABLE".equalsIgnoreCase(seat.getStatus())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "Seat " + seat.getSeatNumber() + " is not available");
+            // 2. Fetch Event and Verify Seats
+            EventResponse event = eventServiceClient.getEventById(bookingRequest.getEventId());
+            BigDecimal totalAmount = BigDecimal.ZERO;
+
+            for (Long seatId : sortedSeatIds) {
+                SeatResponse seat = eventServiceClient.getSeatById(seatId);
+
+                if (!seat.getEventId().equals(event.getId())) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "Seat does not belong to this event");
+                }
+
+                if (!"AVAILABLE".equalsIgnoreCase(seat.getStatus())) {
+                    throw new ApiException(HttpStatus.CONFLICT, "Seat " + seat.getSeatNumber() + " is already booked or not available");
+                }
+
+                // Temporary reservation is no longer needed since we hold the Redis lock
+                totalAmount = totalAmount.add(seat.getPrice());
             }
 
-            // Lock seat temporarily without bookingId
-            eventServiceClient.updateSeatStatus(seatId, "BOOKED", null);
+            // 3. Create Booking
+            Booking booking = Booking.builder()
+                    .bookingReference(UUID.randomUUID().toString())
+                    .totalAmount(totalAmount)
+                    .bookingStatus("CONFIRMED")
+                    .userId(userId)
+                    .eventId(event.getId())
+                    .build();
 
-            totalAmount = totalAmount.add(seat.getPrice());
+            Booking savedBooking = bookingRepository.save(booking);
+            
+            // 4. Update Seat Status in Event Service
+            for (Long seatId : sortedSeatIds) {
+                eventServiceClient.updateSeatStatus(seatId, "BOOKED", savedBooking.getId());
+            }
+
+            return bookingMapper.mapToResponse(savedBooking);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Thread interrupted while acquiring locks");
+        } finally {
+            // 5. Release all locks in reverse order
+            for (int i = acquiredLocks.size() - 1; i >= 0; i--) {
+                RLock lock = acquiredLocks.get(i);
+                if (lock != null && lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
+            }
         }
-
-        Booking booking = Booking.builder()
-                .bookingReference(UUID.randomUUID().toString())
-                .totalAmount(totalAmount)
-                .bookingStatus("CONFIRMED")
-                .userId(userId)
-                .eventId(event.getId())
-                .build();
-
-        Booking savedBooking = bookingRepository.save(booking);
-        
-        for (Long seatId : bookingRequest.getSeatIds()) {
-            eventServiceClient.updateSeatStatus(seatId, "BOOKED", savedBooking.getId());
-        }
-
-        return bookingMapper.mapToResponse(savedBooking);
     }
 
     @Override
