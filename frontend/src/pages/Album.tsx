@@ -1,22 +1,42 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { eventService } from '../services/eventService';
 
 export const Album = () => {
-  const featuredImage = {
-    src: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?q=80&w=2000&auto=format&fit=crop',
-    alt: 'Massive Festival Crowd'
-  };
+  const [albums, setAlbums] = useState<{id: string, src: string, title: string}[]>([]);
+  const [featuredImage, setFeaturedImage] = useState({ src: '', alt: '' });
+  const [loading, setLoading] = useState(true);
 
-  const albums = [
-    { id: 'live-concert', src: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=1200&auto=format&fit=crop', title: 'Live Concert' },
-    { id: 'stadium', src: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&auto=format&fit=crop', title: 'Stadium' },
-    { id: 'conference', src: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=1200&auto=format&fit=crop', title: 'Conference' },
-    { id: 'performance', src: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1200&auto=format&fit=crop', title: 'Performance' },
-    { id: 'standup-comedy', src: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?q=80&w=1200&auto=format&fit=crop', title: 'Standup Comedy' },
-    { id: 'event-crowd', src: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=1200&auto=format&fit=crop', title: 'Event Crowd' },
-    { id: 'theater', src: 'https://images.unsplash.com/photo-1470229722913-7c090be5bc65?q=80&w=1200&auto=format&fit=crop', title: 'Theater' },
-    { id: 'sports', src: 'https://images.unsplash.com/photo-1554068865-24cecd4e34d8?q=80&w=1200&auto=format&fit=crop', title: 'Sports' },
-  ];
+  useEffect(() => {
+    const fetchEventsAsAlbums = async () => {
+      try {
+        const events = await eventService.getEvents();
+        if (events.length > 0) {
+          const formattedAlbums = events
+            .filter(e => e.imageUrl)
+            .map(e => ({
+              id: e.id.toString(),
+              src: e.imageUrl,
+              title: e.title
+            }));
+          setAlbums(formattedAlbums);
+          
+          if (formattedAlbums.length > 0) {
+            setFeaturedImage({
+              src: formattedAlbums[0].src,
+              alt: formattedAlbums[0].title
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch albums:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEventsAsAlbums();
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors">
@@ -38,23 +58,38 @@ export const Album = () => {
             </p>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
-            className="w-full aspect-[21/9] md:aspect-[21/7] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm"
-          >
-            <img 
-              src={featuredImage.src} 
-              alt={featuredImage.alt} 
-              className="w-full h-full object-cover"
-            />
-          </motion.div>
+          {loading ? (
+            <div className="w-full h-64 flex justify-center items-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+            </div>
+          ) : featuredImage.src ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
+              className="w-full aspect-[21/9] md:aspect-[21/7] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm"
+            >
+              <img 
+                src={featuredImage.src} 
+                alt={featuredImage.alt} 
+                className="w-full h-full object-cover"
+              />
+            </motion.div>
+          ) : null}
         </div>
       </div>
 
       {/* Structured Grid Section */}
       <div className="container mx-auto px-4 max-w-7xl py-24">
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          </div>
+        ) : albums.length === 0 ? (
+          <div className="text-center py-20 text-slate-500 dark:text-slate-400">
+            No albums found.
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {albums.map((album, index) => (
             <motion.div 
@@ -86,6 +121,7 @@ export const Album = () => {
             </motion.div>
           ))}
         </div>
+        )}
       </div>
     </div>
   );

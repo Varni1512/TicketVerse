@@ -3,16 +3,18 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { SeatBuilder, SeatDefinition } from '../../components/admin/SeatBuilder';
+import { AdminSeatBookingModal } from '../../components/admin/AdminSeatBookingModal';
 import { api } from '../../services/api';
 import { eventService } from '../../services/eventService';
 import { Event } from '../../types';
-import { Calendar, MapPin, Tag, Plus, Trash2, Edit } from 'lucide-react';
+import { Calendar, MapPin, Tag, Plus, Trash2, Edit, Ticket } from 'lucide-react';
 
 export const ManageEvents = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [selectedEventIdForBooking, setSelectedEventIdForBooking] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -269,6 +271,9 @@ export const ManageEvents = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="outline" size="sm" className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 dark:hover:bg-primary-950/30" onClick={() => setSelectedEventIdForBooking(event.id)}>
+                      <Ticket className="w-4 h-4 mr-2" /> Occupancy & Book
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => handleEdit(event)}>
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -399,6 +404,13 @@ export const ManageEvents = () => {
             </Card>
           )}
         </>
+      )}
+
+      {selectedEventIdForBooking && (
+        <AdminSeatBookingModal 
+          eventId={selectedEventIdForBooking} 
+          onClose={() => setSelectedEventIdForBooking(null)} 
+        />
       )}
     </div>
   );

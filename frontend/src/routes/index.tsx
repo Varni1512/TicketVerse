@@ -20,6 +20,7 @@ import { AdminLayout } from '../layouts/AdminLayout';
 import { AdminDashboard } from '../pages/admin/AdminDashboard';
 import { ManageEvents } from '../pages/admin/ManageEvents';
 import { ManageAlbums } from '../pages/admin/ManageAlbums';
+import { ManageUsers } from '../pages/admin/ManageUsers';
 import { ViewContacts } from '../pages/admin/ViewContacts';
 
 const NotFound = () => (
@@ -61,6 +62,7 @@ export const router = createBrowserRouter([
       { index: true, element: <AdminDashboard /> },
       { path: 'events', element: <ManageEvents /> },
       { path: 'albums', element: <ManageAlbums /> },
+      { path: 'users', element: <ManageUsers /> },
       { path: 'contacts', element: <ViewContacts /> },
     ]
   }

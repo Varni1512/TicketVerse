@@ -12,7 +12,7 @@ export const useWebSocket = () => {
   useEffect(() => {
     const client = new Client({
       // We use SockJS fallback because some older browsers/proxies don't support raw WebSocket
-      webSocketFactory: () => new SockJS('http://localhost:8082/ws'),
+      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
       // Passing token for potential WS auth in the future
       connectHeaders: {
         Authorization: token ? `Bearer ${token}` : '',

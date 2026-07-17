@@ -1,6 +1,5 @@
 server:
   port: ${PORT:8081}
-
 spring:
   application:
     name: ticketverse-auth-service
@@ -16,6 +15,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        default_schema: ${DB_SCHEMA:}
     show-sql: true
   flyway:
     enabled: true
@@ -31,16 +31,13 @@ spring:
           auth: true
           starttls:
             enable: true
-
 app:
-  jwt-secret: ${JWT_SECRET:c2VjcmV0LWtleS1mb3ItdGlja2V0dmVyc2UtYXBwbGljYXRpb24tc2hvdWxkLWJlLWxvbmctZW5vdWdo_default_local_dev_key}
+  jwt-secret: ${JWT_SECRET:c2VjcmV0LWtleS1mb3ItdGlja2V0dmVyc2UtYXBwbGljYXRpb24tc2hvdWxkLWJlLWxvbmctZW5vdWdo}
   jwt-expiration-milliseconds: 604800000
-
 logging:
   level:
     com.ticketverse: DEBUG
     org.springframework.security: DEBUG
-
 management:
   endpoints:
     web:
@@ -60,12 +57,6 @@ management:
   tracing:
     sampling:
       probability: 1.0
-
-logging:
-  level:
-    com.ticketverse: INFO
-
-management:
   zipkin:
     tracing:
       endpoint: http://localhost:9411/api/v2/spans

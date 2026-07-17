@@ -3,6 +3,7 @@ import { Card } from '../../components/ui/Card';
 import { Users, Calendar, Ticket as TicketIcon, IndianRupee, Layers } from 'lucide-react';
 import { api } from '../../services/api';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -16,12 +17,15 @@ export const AdminDashboard = () => {
     totalSeatsSold: 0
   });
   
+  const [analytics, setAnalytics] = useState([]);
+  
   const { connected, subscribe } = useWebSocket();
 
   useEffect(() => {
     if (connected) {
       const unsub = subscribe('/topic/dashboard', (msg) => {
         if (msg.payload) {
+          // Increment the current stats instead of replacing (since backend might send total or just diff, let's assume total for now since the existing code replaced it)
           setLiveStats({
             totalBookings: msg.payload.totalBookings || 0,
             totalRevenue: msg.payload.totalRevenue || 0,
@@ -34,19 +38,27 @@ export const AdminDashboard = () => {
   }, [connected, subscribe]);
 
   useEffect(() => {
-    // In a real app, this would hit an aggregate endpoint.
-    // For now, we'll fetch list lengths.
     const fetchStats = async () => {
       try {
-        const [eventsRes, contactsRes] = await Promise.all([
+        const [eventsRes, contactsRes, adminStatsRes, analyticsRes] = await Promise.all([
           api.get('/events'),
-          api.get('/contact')
+          api.get('/contact'),
+          api.get('/bookings/admin/stats'),
+          api.get('/bookings/admin/analytics')
         ]);
         
         setStats({
           events: eventsRes.data.length,
           messages: contactsRes.data.length
         });
+        
+        setLiveStats({
+          totalBookings: adminStatsRes.data.totalBookings || 0,
+          totalRevenue: adminStatsRes.data.totalRevenue || 0,
+          totalSeatsSold: adminStatsRes.data.totalSeatsSold || 0
+        });
+        
+        setAnalytics(analyticsRes.data || []);
       } catch (error) {
         console.error('Failed to fetch stats', error);
       }
@@ -107,6 +119,40 @@ export const AdminDashboard = () => {
           <div>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Contact Messages</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.messages}</p>
+          </div>
+        </Card>
+      </div>
+
+      <div className="mt-8">
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">Revenue & Bookings Analytics</h3>
+          <div className="h-[350px] w-full">
+            {analytics.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={analytics} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="date" stroke="#94a3b8" />
+                  <YAxis yAxisId="left" stroke="#94a3b8" tickFormatter={(value) => `₹${value}`} />
+                  <YAxis yAxisId="right" orientation="right" stroke="#10b981" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
+                    itemStyle={{ color: '#f8fafc' }}
+                  />
+                  <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="#8b5cf6" fillOpacity={1} fill="url(#colorRevenue)" name="Revenue (₹)" />
+                  <Area yAxisId="right" type="monotone" dataKey="tickets" stroke="#10b981" fill="#10b981" fillOpacity={0.1} name="Tickets Sold" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-slate-500">
+                No analytics data available yet.
+              </div>
+            )}
           </div>
         </Card>
       </div>

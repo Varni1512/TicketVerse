@@ -63,7 +63,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingResponse createBooking(BookingRequest bookingRequest, Long userId) {
+    public BookingResponse createBooking(BookingRequest bookingRequest, Long userId, String userEmail) {
         bookingsTotal.increment();
         String correlationId = java.util.UUID.randomUUID().toString();
         org.slf4j.MDC.put("correlationId", correlationId);
@@ -134,10 +134,10 @@ public class BookingServiceImpl implements BookingService {
             
             // 4. (Removed Synchronous REST Call) Seat Status is now updated asynchronously via Event Service consuming BookingCreatedEvent.
 
-            // 5. Publish Kafka Event
             com.ticketverse.event.BookingCreatedPayload payload = com.ticketverse.event.BookingCreatedPayload.builder()
                     .bookingId(savedBooking.getId())
                     .userId(userId)
+                    .userEmail(userEmail)
                     .eventId(event.getId())
                     .seatIds(sortedSeatIds)
                     .bookingTime(LocalDateTime.now())
@@ -234,5 +234,150 @@ public class BookingServiceImpl implements BookingService {
                 com.ticketverse.event.DomainEvent.create("BOOKING_CANCELLED", UUID.randomUUID().toString(), "ticketverse-booking-service", payload, null);
         
         kafkaTemplate.send("booking-created-topic", booking.getEventId().toString(), domainEvent);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse adminDirectBooking(BookingRequest bookingRequest, String targetUserEmail) {
+        bookingsTotal.increment();
+        String correlationId = java.util.UUID.randomUUID().toString();
+        
+        List<Long> sortedSeatIds = bookingRequest.getSeatIds().stream()
+                .sorted()
+                .collect(Collectors.toList());
+        List<RLock> acquiredLocks = new ArrayList<>();
+        boolean bookingSuccessful = false;
+
+        try {
+            for (Long seatId : sortedSeatIds) {
+                seatLockCount.increment();
+                RLock lock = redissonClient.getLock("seat_lock:" + seatId);
+                boolean isLocked = lock.tryLock(5, 60, TimeUnit.SECONDS);
+                if (!isLocked) {
+                    throw new ApiException(HttpStatus.CONFLICT, "Seat " + seatId + " is currently being booked by another user");
+                }
+                acquiredLocks.add(lock);
+            }
+
+            EventResponse event = eventServiceClient.getEventById(bookingRequest.getEventId());
+            BigDecimal totalAmount = BigDecimal.ZERO;
+
+            for (Long seatId : sortedSeatIds) {
+                SeatResponse seat = eventServiceClient.getSeatById(seatId);
+                if (!seat.getEventId().equals(event.getId())) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "Seat does not belong to this event");
+                }
+                if (!"AVAILABLE".equalsIgnoreCase(seat.getStatus())) {
+                    throw new ApiException(HttpStatus.CONFLICT, "Seat " + seat.getSeatNumber() + " is already booked or not available");
+                }
+                totalAmount = totalAmount.add(seat.getPrice());
+            }
+
+            // Using userId 1 as a placeholder for admin booking if user doesn't exist, but typically admin uses their own ID
+            // Here we just use a dummy ID 999 for "admin direct booking" if we don't have the user's ID
+            Long dummyUserId = 999L;
+            
+            Booking booking = Booking.builder()
+                    .bookingReference(UUID.randomUUID().toString())
+                    .totalAmount(totalAmount)
+                    .bookingStatus("CONFIRMED")
+                    .userId(dummyUserId)
+                    .eventId(event.getId())
+                    .build();
+
+            Booking savedBooking = bookingRepository.save(booking);
+
+            com.ticketverse.event.BookingCreatedPayload payload = com.ticketverse.event.BookingCreatedPayload.builder()
+                    .bookingId(savedBooking.getId())
+                    .userId(dummyUserId)
+                    .userEmail(targetUserEmail != null && !targetUserEmail.isEmpty() ? targetUserEmail : "admin@ticketverse.com")
+                    .eventId(event.getId())
+                    .seatIds(sortedSeatIds)
+                    .bookingTime(LocalDateTime.now())
+                    .totalAmount(totalAmount)
+                    .status(savedBooking.getBookingStatus())
+                    .build();
+
+            com.ticketverse.event.DomainEvent<com.ticketverse.event.BookingCreatedPayload> domainEvent = 
+                    com.ticketverse.event.DomainEvent.create("BOOKING_CREATED", correlationId, "ticketverse-booking-service", payload, null);
+
+            kafkaTemplate.send("booking-created-topic", event.getId().toString(), domainEvent);
+
+            bookingSuccessful = true;
+            bookingsSuccess.increment();
+            revenueTotal.increment(totalAmount.doubleValue());
+            return bookingMapper.mapToResponse(savedBooking);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Thread interrupted while acquiring locks");
+        } finally {
+            for (int i = acquiredLocks.size() - 1; i >= 0; i--) {
+                RLock lock = acquiredLocks.get(i);
+                if (lock != null && lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
+            }
+            if (!bookingSuccessful) {
+                bookingsFailed.increment();
+            }
+        }
+    }
+
+    @Override
+    public java.util.Map<String, Object> getAdminStats() {
+        List<Booking> allBookings = bookingRepository.findAll();
+        LocalDateTime today = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+        
+        long totalBookingsToday = 0;
+        BigDecimal totalRevenueToday = BigDecimal.ZERO;
+        
+        for (Booking b : allBookings) {
+            if ("CONFIRMED".equals(b.getBookingStatus()) && b.getBookingDate().isAfter(today)) {
+                totalBookingsToday++;
+                totalRevenueToday = totalRevenueToday.add(b.getTotalAmount());
+            }
+        }
+        
+        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+        stats.put("totalBookings", totalBookingsToday);
+        stats.put("totalRevenue", totalRevenueToday);
+        // Estimate 2 seats per booking if we don't query event service for every booking
+        stats.put("totalSeatsSold", totalBookingsToday * 2);
+        
+        return stats;
+    }
+
+    @Override
+    public List<java.util.Map<String, Object>> getAdminAnalytics() {
+        List<Booking> allBookings = bookingRepository.findAll();
+        
+        // Group by date (YYYY-MM-DD)
+        java.util.Map<String, BigDecimal> revenueByDate = new java.util.HashMap<>();
+        java.util.Map<String, Integer> ticketsByDate = new java.util.HashMap<>();
+        
+        for (Booking b : allBookings) {
+            if ("CONFIRMED".equals(b.getBookingStatus())) {
+                String dateStr = b.getBookingDate().toLocalDate().toString();
+                revenueByDate.put(dateStr, revenueByDate.getOrDefault(dateStr, BigDecimal.ZERO).add(b.getTotalAmount()));
+                // Estimate 2 seats per booking
+                ticketsByDate.put(dateStr, ticketsByDate.getOrDefault(dateStr, 0) + 2);
+            }
+        }
+        
+        List<java.util.Map<String, Object>> analytics = new ArrayList<>();
+        // Sort dates
+        List<String> sortedDates = new ArrayList<>(revenueByDate.keySet());
+        Collections.sort(sortedDates);
+        
+        for (String date : sortedDates) {
+            java.util.Map<String, Object> dayStat = new java.util.HashMap<>();
+            dayStat.put("date", date);
+            dayStat.put("revenue", revenueByDate.get(date));
+            dayStat.put("tickets", ticketsByDate.get(date));
+            analytics.add(dayStat);
+        }
+        
+        return analytics;
     }
 }

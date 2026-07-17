@@ -140,7 +140,7 @@ public class ConcurrencyIntegrationTest {
                     long startTime = System.currentTimeMillis();
                     
                     try {
-                        bookingService.createBooking(request, 1L);
+                        bookingService.createBooking(request, 1L, "test@example.com");
                         successCount.incrementAndGet();
                     } catch (ApiException e) {
                         if (e.getStatus() == HttpStatus.CONFLICT) {

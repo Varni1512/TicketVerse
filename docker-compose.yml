@@ -1,77 +1,316 @@
 version: '3.8'
-
 services:
   redis:
     image: redis:7-alpine
     container_name: ticketverse-redis
     ports:
-      - "6379:6379"
-    command: redis-server --requirepass "ticketverse_redis_secret" --notify-keyspace-events Ex
+    - 6379:6379
+    command: redis-server --requirepass "ticketverse_redis_secret" --notify-keyspace-events
+      Ex
     volumes:
-      - redis_data:/data
-    restart: always
-
+    - redis_data:/data
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: ticketverse-kafka
     ports:
-      - "9092:9092"
-      - "9093:9093"
+    - 9092:9092
+    - 9093:9093
     environment:
       KAFKA_NODE_ID: 1
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
-      KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092'
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_LISTENERS: PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      CLUSTER_ID: '1YpVRejgQ1aDQhhKJhmo4w'
+      CLUSTER_ID: 1YpVRejgQ1aDQhhKJhmo4w
     volumes:
-      - kafka_data:/var/lib/kafka/data
-    restart: always
-
+    - kafka_data:/var/lib/kafka/data
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
   zipkin:
     image: openzipkin/zipkin:3
     container_name: ticketverse-zipkin
     ports:
-      - "9411:9411"
-    restart: always
-
+    - 9411:9411
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
   prometheus:
     image: prom/prometheus:v2.51.2
     container_name: ticketverse-prometheus
     ports:
-      - "9090:9090"
+    - 9090:9090
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
+    - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    - prometheus_data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-    restart: always
-
+    - --config.file=/etc/prometheus/prometheus.yml
+    - --storage.tsdb.path=/prometheus
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
   grafana:
     image: grafana/grafana:10.4.1
     container_name: ticketverse-grafana
     ports:
-      - "3000:3000"
+    - 3000:3000
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    - grafana_data:/var/lib/grafana
+    - ./grafana/provisioning:/etc/grafana/provisioning
+    - ./grafana/dashboards:/var/lib/grafana/dashboards
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+    - GF_SECURITY_ADMIN_PASSWORD=admin
     depends_on:
-      - prometheus
-    restart: always
-
+    - prometheus
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
+  gateway:
+    build:
+      context: ./backend
+      args:
+        SERVICE_NAME: ticketverse-gateway
+    container_name: ticketverse-gateway
+    ports:
+    - 8080:8080
+    environment:
+    - SPRING_PROFILES_ACTIVE=prod
+    - AUTH_SERVICE_URL=http://auth-service:8080
+    - EVENT_SERVICE_URL=http://event-service:8080
+    - BOOKING_SERVICE_URL=http://booking-service:8080
+    - CONTACT_SERVICE_URL=http://contact-service:8080
+    - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+    depends_on:
+    - auth-service
+    - event-service
+    - booking-service
+    - contact-service
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
+  auth-service:
+    build:
+      context: ./backend
+      args:
+        SERVICE_NAME: ticketverse-auth-service
+    container_name: ticketverse-auth-service
+    environment:
+    - SPRING_PROFILES_ACTIVE=prod
+    - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+    - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+    - JWT_SECRET=${JWT_SECRET}
+    - MAIL_USERNAME=${MAIL_USERNAME}
+    - MAIL_PASSWORD=${MAIL_PASSWORD}
+    - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+    - SPRING_FLYWAY_CREATE_SCHEMAS=true
+    - SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
+    - PORT=8080
+    - SPRING_FLYWAY_BASELINE_VERSION=0
+    - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+    - DB_SCHEMA=auth_service_v10
+    - SPRING_FLYWAY_SCHEMAS=auth_service_v10
+    - SPRING_FLYWAY_DEFAULT_SCHEMA=auth_service_v10
+    - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
+  event-service:
+    build:
+      context: ./backend
+      args:
+        SERVICE_NAME: ticketverse-event-service
+    container_name: ticketverse-event-service
+    environment:
+    - SPRING_PROFILES_ACTIVE=prod
+    - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+    - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+    - JWT_SECRET=${JWT_SECRET}
+    - REDIS_HOST=redis
+    - REDIS_PORT=6379
+    - REDIS_PASSWORD=ticketverse_redis_secret
+    - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+    - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+    - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+    - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+    - SPRING_FLYWAY_CREATE_SCHEMAS=true
+    - SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
+    - PORT=8080
+    - SPRING_FLYWAY_BASELINE_VERSION=0
+    - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+    - DB_SCHEMA=event_service_v10
+    - SPRING_FLYWAY_SCHEMAS=event_service_v10
+    - SPRING_FLYWAY_DEFAULT_SCHEMA=event_service_v10
+    - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+    depends_on:
+    - redis
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
+  booking-service:
+    build:
+      context: ./backend
+      args:
+        SERVICE_NAME: ticketverse-booking-service
+    container_name: ticketverse-booking-service
+    environment:
+    - SPRING_PROFILES_ACTIVE=prod
+    - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+    - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+    - JWT_SECRET=${JWT_SECRET}
+    - REDIS_HOST=redis
+    - REDIS_PORT=6379
+    - REDIS_PASSWORD=ticketverse_redis_secret
+    - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    - EVENT_SERVICE_URL=http://event-service:8080
+    - MAIL_USERNAME=${MAIL_USERNAME}
+    - MAIL_PASSWORD=${MAIL_PASSWORD}
+    - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+    - SPRING_FLYWAY_CREATE_SCHEMAS=true
+    - SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
+    - PORT=8080
+    - SPRING_FLYWAY_BASELINE_VERSION=0
+    - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+    - DB_SCHEMA=booking_service_v10
+    - SPRING_FLYWAY_SCHEMAS=booking_service_v10
+    - SPRING_FLYWAY_DEFAULT_SCHEMA=booking_service_v10
+    - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+    depends_on:
+    - redis
+    - kafka
+    - event-service
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
+  contact-service:
+    build:
+      context: ./backend
+      args:
+        SERVICE_NAME: ticketverse-contact-service
+    container_name: ticketverse-contact-service
+    environment:
+    - SPRING_PROFILES_ACTIVE=prod
+    - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+    - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+    - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+    - SPRING_FLYWAY_CREATE_SCHEMAS=true
+    - SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
+    - PORT=8080
+    - SPRING_FLYWAY_BASELINE_VERSION=0
+    - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+    - DB_SCHEMA=contact_service_v10
+    - SPRING_FLYWAY_SCHEMAS=contact_service_v10
+    - SPRING_FLYWAY_DEFAULT_SCHEMA=contact_service_v10
+    - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
+  notification-service:
+    build:
+      context: ./backend
+      args:
+        SERVICE_NAME: ticketverse-notification-service
+    container_name: ticketverse-notification-service
+    environment:
+    - SPRING_PROFILES_ACTIVE=prod
+    - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+    - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+    - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    - MAIL_USERNAME=${MAIL_USERNAME}
+    - MAIL_PASSWORD=${MAIL_PASSWORD}
+    - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+    - SPRING_FLYWAY_CREATE_SCHEMAS=true
+    - SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
+    - PORT_NOTIFICATION=8080
+    - SPRING_FLYWAY_BASELINE_VERSION=0
+    - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+    - DB_SCHEMA=notification_service_v10
+    - SPRING_FLYWAY_SCHEMAS=notification_service_v10
+    - SPRING_FLYWAY_DEFAULT_SCHEMA=notification_service_v10
+    - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+    depends_on:
+    - kafka
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
+  analytics-service:
+    build:
+      context: ./backend
+      args:
+        SERVICE_NAME: ticketverse-analytics-service
+    container_name: ticketverse-analytics-service
+    environment:
+    - SPRING_PROFILES_ACTIVE=prod
+    - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+    - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+    - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+    - SPRING_FLYWAY_CREATE_SCHEMAS=true
+    - SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
+    - PORT_ANALYTICS=8080
+    - SPRING_FLYWAY_BASELINE_VERSION=0
+    - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+    - DB_SCHEMA=analytics_service_v10
+    - SPRING_FLYWAY_SCHEMAS=analytics_service_v10
+    - SPRING_FLYWAY_DEFAULT_SCHEMA=analytics_service_v10
+    - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+    depends_on:
+    - kafka
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
+  audit-service:
+    build:
+      context: ./backend
+      args:
+        SERVICE_NAME: ticketverse-audit-service
+    container_name: ticketverse-audit-service
+    environment:
+    - SPRING_PROFILES_ACTIVE=prod
+    - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+    - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+    - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+    - SPRING_FLYWAY_CREATE_SCHEMAS=true
+    - SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
+    - PORT_AUDIT=8080
+    - SPRING_FLYWAY_BASELINE_VERSION=0
+    - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+    - DB_SCHEMA=audit_service_v10
+    - SPRING_FLYWAY_SCHEMAS=audit_service_v10
+    - SPRING_FLYWAY_DEFAULT_SCHEMA=audit_service_v10
+    - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+    depends_on:
+    - kafka
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
+  frontend:
+    build:
+      context: ./frontend
+    container_name: ticketverse-frontend
+    ports:
+    - 5173:80
+    depends_on:
+    - gateway
+    restart: unless-stopped
+    networks:
+    - ticketverse-network
 volumes:
-  redis_data:
-  kafka_data:
-  prometheus_data:
-  grafana_data:
+  redis_data: null
+  kafka_data: null
+  prometheus_data: null
+  grafana_data: null
+networks:
+  ticketverse-network:
+    driver: bridge

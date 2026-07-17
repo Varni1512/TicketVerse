@@ -15,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -22,6 +25,7 @@ public class NotificationService {
 
     private final ProcessedEventRepository processedEventRepository;
     private final ObjectMapper objectMapper;
+    private final JavaMailSender mailSender;
 
     @KafkaListener(topics = "booking-created-topic", groupId = "notification-group")
     @Transactional
@@ -45,8 +49,8 @@ public class NotificationService {
             BookingCreatedPayload payload = event.getPayload();
             log.info("Sending confirmation email for booking {} to user {}", payload.getBookingId(), payload.getUserId());
             
-            // Simulate sending email
-            simulateEmailSending(payload);
+            // Send confirmation email
+            sendConfirmationEmail(payload);
 
             // 3. Mark as Processed (Exactly-once semantics via DB transaction)
             ProcessedEvent processedEvent = ProcessedEvent.builder()
@@ -65,16 +69,22 @@ public class NotificationService {
         }
     }
 
-    private void simulateEmailSending(BookingCreatedPayload payload) {
-        // Simulate potential network issues/latency
+    private void sendConfirmationEmail(BookingCreatedPayload payload) {
+        if (payload.getUserEmail() == null) {
+            log.warn("Cannot send email: User email is null for booking {}", payload.getBookingId());
+            return;
+        }
         try {
-            Thread.sleep(200);
-            // Simulate 5% chance of failure for retry demonstration
-            if (Math.random() < 0.05) {
-                throw new RuntimeException("Simulated SMTP Server Down");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(payload.getUserEmail());
+            message.setSubject("TicketVerse: Booking Confirmation");
+            message.setText("Congratulations! Your booking (ID: " + payload.getBookingId() + ") is confirmed.\n"
+                    + "Total Amount: ₹" + payload.getTotalAmount() + "\n"
+                    + "Enjoy the event!");
+            mailSender.send(message);
+            log.info("Email sent successfully to {}", payload.getUserEmail());
+        } catch (Exception e) {
+            log.error("Failed to send email to {}: {}", payload.getUserEmail(), e.getMessage());
         }
     }
 }

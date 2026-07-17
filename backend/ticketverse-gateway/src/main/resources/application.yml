@@ -27,11 +27,11 @@ spring:
         - id: auth-service
           uri: ${AUTH_SERVICE_URL:http://localhost:8081}
           predicates:
-            - Path=/api/auth/**
+            - Path=/api/auth/**, /api/users/**
         - id: event-service
           uri: ${EVENT_SERVICE_URL:http://localhost:8082}
           predicates:
-            - Path=/api/events/**, /api/seats/**, /api/albums/**
+            - Path=/api/events/**, /api/seats/**, /api/albums/**, /ws/**
         - id: booking-service
           uri: ${BOOKING_SERVICE_URL:http://localhost:8083}
           predicates:
@@ -60,16 +60,13 @@ management:
   tracing:
     sampling:
       probability: 1.0
-
-logging:
-  level:
-    com.ticketverse: INFO
-
-management:
   zipkin:
     tracing:
       endpoint: http://localhost:9411/api/v2/spans
 
+logging:
+  level:
+    com.ticketverse: INFO
 resilience4j.circuitbreaker:
   instances:
     backendServices:

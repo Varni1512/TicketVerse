@@ -41,7 +41,7 @@ public class BookingController {
         }
         
         Long userId = jwtTokenProvider.getUserId(token.substring(7));
-        BookingResponse bookingResponse = bookingService.createBooking(bookingRequest, userId);
+        BookingResponse bookingResponse = bookingService.createBooking(bookingRequest, userId, userEmail);
         return new ResponseEntity<>(bookingResponse, HttpStatus.CREATED);
     }
 
@@ -63,5 +63,19 @@ public class BookingController {
         Long userId = jwtTokenProvider.getUserId(token.substring(7));
         bookingService.cancelBooking(id, userId);
         return ResponseEntity.ok("Booking cancelled successfully!");
+    }
+    @GetMapping("/admin/stats")
+    public ResponseEntity<java.util.Map<String, Object>> getAdminStats() {
+        return ResponseEntity.ok(bookingService.getAdminStats());
+    }
+
+    @GetMapping("/admin/analytics")
+    public ResponseEntity<List<java.util.Map<String, Object>>> getAdminAnalytics() {
+        return ResponseEntity.ok(bookingService.getAdminAnalytics());
+    }
+
+    @PostMapping("/admin")
+    public ResponseEntity<?> createAdminBooking(@Valid @RequestBody BookingRequest bookingRequest, @RequestParam(required = false) String userEmail) {
+        return new ResponseEntity<>(bookingService.adminDirectBooking(bookingRequest, userEmail), HttpStatus.CREATED);
     }
 }

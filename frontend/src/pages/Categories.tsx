@@ -1,45 +1,75 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Music, Trophy, Laugh, MonitorPlay } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { eventService } from '../services/eventService';
 
 export const Categories = () => {
-  const allCategories = [
-    { 
-      name: 'Music', 
-      description: 'Live Concerts & Music Festivals', 
-      image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=1200&auto=format&fit=crop',
-      icon: Music,
-      eventCount: '124 Events'
-    },
-    { 
-      name: 'Sports', 
-      description: 'Major Leagues & Championships', 
-      image: 'https://images.unsplash.com/photo-1554068865-24cecd4e34d8?q=80&w=1200&auto=format&fit=crop',
-      icon: Trophy,
-      eventCount: '89 Events'
-    },
-    { 
-      name: 'Comedy', 
-      description: 'Stand-up & Special Shows', 
-      image: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?q=80&w=1200&auto=format&fit=crop',
-      icon: Laugh,
-      eventCount: '45 Events'
-    },
-    { 
-      name: 'Tech', 
-      description: 'Conferences & Summits', 
-      image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=1200&auto=format&fit=crop',
-      icon: MonitorPlay,
-      eventCount: '32 Events'
-    },
-    { 
-      name: 'Theater', 
-      description: 'Musicals, Plays & Opera', 
-      image: 'https://images.unsplash.com/photo-1507676184212-d0330a151f84?q=80&w=1200&auto=format&fit=crop',
-      icon: Music,
-      eventCount: '56 Events'
-    },
-  ];
+  const [categories, setCategories] = useState<{name: string, description: string, image: string, icon: any, eventCount: string}[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAndProcessCategories = async () => {
+      try {
+        const events = await eventService.getEvents();
+        const categoryMap = new Map();
+        
+        events.forEach(event => {
+          const cat = event.category || 'Other';
+          if (!categoryMap.has(cat)) {
+            categoryMap.set(cat, {
+              count: 0,
+              image: event.imageUrl || 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=1200&auto=format&fit=crop'
+            });
+          }
+          categoryMap.get(cat).count += 1;
+        });
+
+        const allCats = await eventService.getCategories();
+        
+        allCats.forEach(cat => {
+            if (!categoryMap.has(cat)) {
+                categoryMap.set(cat, { count: 0, image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=1200&auto=format&fit=crop' });
+            }
+        });
+
+        const getIconForCategory = (name: string) => {
+          const lower = name.toLowerCase();
+          if (lower.includes('music') || lower.includes('concert')) return Music;
+          if (lower.includes('sport') || lower.includes('match')) return Trophy;
+          if (lower.includes('comedy')) return Laugh;
+          if (lower.includes('tech') || lower.includes('conference')) return MonitorPlay;
+          return Music;
+        };
+        
+        const getDescriptionForCategory = (name: string) => {
+          const lower = name.toLowerCase();
+          if (lower.includes('music')) return 'Live Concerts & Music Festivals';
+          if (lower.includes('sport')) return 'Major Leagues & Championships';
+          if (lower.includes('comedy')) return 'Stand-up & Special Shows';
+          if (lower.includes('tech')) return 'Conferences & Summits';
+          if (lower.includes('theater')) return 'Musicals, Plays & Opera';
+          return 'Explore amazing events';
+        };
+
+        const processedCategories = Array.from(categoryMap.entries()).map(([name, data]) => ({
+          name,
+          description: getDescriptionForCategory(name),
+          image: data.image,
+          icon: getIconForCategory(name),
+          eventCount: `${data.count} Events`
+        }));
+        
+        setCategories(processedCategories);
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAndProcessCategories();
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-24 pb-32 transition-colors">
@@ -62,8 +92,21 @@ export const Categories = () => {
           </p>
         </motion.div>
 
+        {loading && (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          </div>
+        )}
+
+        {!loading && categories.length === 0 && (
+          <div className="text-center py-20 text-slate-500 dark:text-slate-400">
+            No categories found.
+          </div>
+        )}
+
+        {!loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {allCategories.map((cat, index) => {
+          {categories.map((cat, index) => {
             const Icon = cat.icon;
             return (
               <motion.div
@@ -113,6 +156,7 @@ export const Categories = () => {
             );
           })}
         </div>
+        )}
       </div>
     </div>
   );

@@ -25,6 +25,7 @@ public class KafkaWebSocketConsumer {
     private final ObjectMapper objectMapper;
     private final SimpMessagingTemplate messagingTemplate;
     private final SeatRepository seatRepository;
+    private final org.springframework.cache.CacheManager cacheManager;
     private final MeterRegistry meterRegistry;
     
     private Counter broadcastRateCounter;
@@ -86,6 +87,12 @@ public class KafkaWebSocketConsumer {
                 }
                 seatRepository.saveAll(seats);
                 
+                // Evict cache
+                org.springframework.cache.Cache cache = cacheManager.getCache("seats");
+                if (cache != null) {
+                    cache.clear();
+                }
+                
                 // 2. Broadcast SeatBookedEvent for each seat
                 for (Long seatId : payload.getSeatIds()) {
                     DomainEvent<SeatBookedEvent> wsEvent = DomainEvent.create(
@@ -124,6 +131,13 @@ public class KafkaWebSocketConsumer {
                     broadcastRateCounter.increment();
                 }
                 seatRepository.saveAll(seats);
+                
+                // Evict cache
+                org.springframework.cache.Cache cache = cacheManager.getCache("seats");
+                if (cache != null) {
+                    cache.clear();
+                }
+                
                 log.info("Processed BOOKING_CANCELLED and freed seats for booking {}", payload.getBookingId());
             }
 

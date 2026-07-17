@@ -36,6 +36,7 @@ export const AdminLayout = () => {
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard className="w-5 h-5" /> },
     { name: 'Manage Events', path: '/admin/events', icon: <CalendarPlus className="w-5 h-5" /> },
     { name: 'Event Albums', path: '/admin/albums', icon: <ImageIcon className="w-5 h-5" /> },
+    { name: 'Manage Users', path: '/admin/users', icon: <Users className="w-5 h-5" /> },
     { name: 'Contact Messages', path: '/admin/contacts', icon: <Users className="w-5 h-5" /> },
   ];
 

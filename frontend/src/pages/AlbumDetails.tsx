@@ -1,29 +1,45 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
+import { api } from '../services/api';
+import { eventService } from '../services/eventService';
 
 export const AlbumDetails = () => {
   const { id } = useParams<{ id: string }>();
+  const [title, setTitle] = useState('Gallery');
+  const [rotatedImages, setRotatedImages] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Helper to format ID to title
-  const title = id ? id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : 'Gallery';
+  useEffect(() => {
+    const fetchAlbumDetails = async () => {
+      try {
+        if (!id) return;
+        
+        // Fetch event details for title
+        const event = await eventService.getEventById(id);
+        if (event) {
+          setTitle(event.title);
+        }
 
-  // Generate some premium stock images based on the album (in a real app, this would be fetched from an API)
-  const albumImages = [
-    'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1540039155732-676229ebca02?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1470229722913-7c090be5bc65?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1533174000228-db9e89d532be?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?q=80&w=1200&auto=format&fit=crop'
-  ];
-
-  // We'll shuffle them slightly based on the ID length just to make different albums look slightly different
-  const seed = id ? id.length : 0;
-  const rotatedImages = [...albumImages.slice(seed % albumImages.length), ...albumImages.slice(0, seed % albumImages.length)];
+        // Fetch media
+        const mediaRes = await api.get(`/events/${id}/media`);
+        if (mediaRes.data && mediaRes.data.length > 0) {
+          setRotatedImages(mediaRes.data.map((m: any) => m.mediaUrl));
+        } else {
+          // If no media, maybe just show the event image
+          if (event && event.imageUrl) {
+            setRotatedImages([event.imageUrl]);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch album details:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAlbumDetails();
+  }, [id]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors pt-24 pb-32">
@@ -46,7 +62,15 @@ export const AlbumDetails = () => {
           </p>
         </motion.div>
 
-        {/* Masonry / Bento Style Grid for the inner album */}
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          </div>
+        ) : rotatedImages.length === 0 ? (
+          <div className="text-center py-20 text-slate-500 dark:text-slate-400">
+            No images found for this album.
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 auto-rows-[250px] gap-4 md:gap-6">
           {rotatedImages.map((src, index) => {
             // Create a varied grid pattern
@@ -75,6 +99,7 @@ export const AlbumDetails = () => {
             );
           })}
         </div>
+        )}
 
       </div>
     </div>

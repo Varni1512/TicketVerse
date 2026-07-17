@@ -19,6 +19,7 @@ import java.util.List;
 public class BookingCreatedPayload {
     private Long bookingId;
     private Long userId;
+    private String userEmail;
     private Long eventId;
     private List<Long> seatIds;
     private LocalDateTime bookingTime;
