@@ -23,13 +23,25 @@ import { ManageAlbums } from '../pages/admin/ManageAlbums';
 import { ManageUsers } from '../pages/admin/ManageUsers';
 import { ViewContacts } from '../pages/admin/ViewContacts';
 
-const NotFound = () => (
-  <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-    <h1 className="text-6xl font-bold text-slate-900 dark:text-white mb-4">404</h1>
-    <p className="text-xl text-slate-600 dark:text-slate-400 mb-8">Oops! The page you are looking for does not exist.</p>
-    <a href="/" className="px-6 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700">Go Home</a>
-  </div>
-);
+import { useRouteError } from 'react-router-dom';
+
+const NotFound = () => {
+  const error = useRouteError() as any;
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+      <h1 className="text-6xl font-bold text-slate-900 dark:text-white mb-4">404</h1>
+      <p className="text-xl text-slate-600 dark:text-slate-400 mb-8">Oops! The page you are looking for does not exist.</p>
+      {error && (
+        <div className="mb-8 p-4 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg max-w-2xl text-left overflow-auto">
+          <p className="font-bold">Error Details:</p>
+          <pre className="text-sm mt-2 whitespace-pre-wrap">{error.message || JSON.stringify(error)}</pre>
+          <pre className="text-xs mt-2 opacity-75">{error.stack}</pre>
+        </div>
+      )}
+      <a href="/" className="px-6 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700">Go Home</a>
+    </div>
+  );
+};
 
 export const router = createBrowserRouter([
   {

@@ -77,10 +77,25 @@ public class NotificationService {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(payload.getUserEmail());
-            message.setSubject("TicketVerse: Booking Confirmation");
-            message.setText("Congratulations! Your booking (ID: " + payload.getBookingId() + ") is confirmed.\n"
-                    + "Total Amount: ₹" + payload.getTotalAmount() + "\n"
-                    + "Enjoy the event!");
+            message.setSubject("TicketVerse: Your Event Ticket");
+            
+            StringBuilder emailBody = new StringBuilder();
+            emailBody.append("🎟️ TicketVerse Booking Confirmation & E-Ticket 🎟️\n\n");
+            emailBody.append("Congratulations! Your booking is confirmed.\n\n");
+            emailBody.append("----------------------------------------\n");
+            emailBody.append("Event: ").append(payload.getEventName() != null ? payload.getEventName() : "N/A").append("\n");
+            emailBody.append("Date: ").append(payload.getEventDate() != null ? payload.getEventDate() : "N/A").append("\n");
+            emailBody.append("Time: ").append(payload.getEventTime() != null ? payload.getEventTime() : "N/A").append("\n");
+            emailBody.append("Venue: ").append(payload.getEventVenue() != null ? payload.getEventVenue() : "N/A").append("\n");
+            emailBody.append("----------------------------------------\n\n");
+            emailBody.append("Booking ID: ").append(payload.getBookingId()).append("\n");
+            emailBody.append("Seats: ").append(payload.getSeatDetails() != null ? payload.getSeatDetails() : "N/A").append("\n");
+            emailBody.append("Total Amount: ₹").append(payload.getTotalAmount()).append("\n\n");
+            emailBody.append("Please present this ticket at the entrance.\n");
+            emailBody.append("Enjoy the event!\n");
+            
+            message.setText(emailBody.toString());
+            
             mailSender.send(message);
             log.info("Email sent successfully to {}", payload.getUserEmail());
         } catch (Exception e) {

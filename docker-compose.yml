@@ -237,7 +237,7 @@ services:
     - DB_SCHEMA=notification_service_v10
     - SPRING_FLYWAY_SCHEMAS=notification_service_v10
     - SPRING_FLYWAY_DEFAULT_SCHEMA=notification_service_v10
-    - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+    - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     depends_on:
     - kafka
     restart: unless-stopped

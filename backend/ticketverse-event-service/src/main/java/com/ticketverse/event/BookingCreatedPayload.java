@@ -25,4 +25,9 @@ public class BookingCreatedPayload {
     private LocalDateTime bookingTime;
     private BigDecimal totalAmount;
     private String status;
+    private String eventName;
+    private String eventDate;
+    private String eventTime;
+    private String eventVenue;
+    private String seatDetails;
 }

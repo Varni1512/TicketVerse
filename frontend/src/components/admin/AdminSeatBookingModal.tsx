@@ -33,7 +33,7 @@ export const AdminSeatBookingModal = ({ eventId, onClose }: AdminSeatBookingModa
   }, [eventId]);
 
   const handleSeatClick = (seatId: string, status: string) => {
-    if (status !== 'AVAILABLE') return;
+    if (status.toUpperCase() !== 'AVAILABLE') return;
     if (selectedSeats.includes(seatId)) {
       setSelectedSeats(selectedSeats.filter(id => id !== seatId));
     } else {
@@ -48,7 +48,7 @@ export const AdminSeatBookingModal = ({ eventId, onClose }: AdminSeatBookingModa
       const payload = {
         eventId: parseInt(eventId),
         seatIds: selectedSeats.map(s => parseInt(s)),
-        otpCode: '' // Admin bypasses OTP
+        otpCode: 'ADMIN_BYPASS' // Admin bypasses OTP, sending dummy to pass @NotEmpty validation
       };
       
       const url = targetEmail 
@@ -57,8 +57,18 @@ export const AdminSeatBookingModal = ({ eventId, onClose }: AdminSeatBookingModa
         
       await api.post(url, payload);
       setSuccessMsg('Booking successful!');
+      
+      // Optimistic update
+      setSeats(prevSeats => 
+        prevSeats.map(seat => 
+          selectedSeats.includes(seat.id.toString()) 
+            ? { ...seat, status: 'BOOKED' } 
+            : seat
+        )
+      );
+      
       setSelectedSeats([]);
-      fetchSeats(); // Refresh seats to show them as booked
+      // fetchSeats(); // Removed to prevent overwriting optimistic update with stale server data
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (error) {
       console.error('Direct booking failed', error);
@@ -68,8 +78,8 @@ export const AdminSeatBookingModal = ({ eventId, onClose }: AdminSeatBookingModa
     }
   };
 
-  const occupiedCount = seats.filter(s => s.status === 'BOOKED').length;
-  const remainingCount = seats.filter(s => s.status === 'AVAILABLE').length;
+  const occupiedCount = seats.filter(s => s.status?.toUpperCase() === 'BOOKED').length;
+  const remainingCount = seats.filter(s => s.status?.toUpperCase() === 'AVAILABLE' || s.status?.toLowerCase() === 'available').length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -108,16 +118,16 @@ export const AdminSeatBookingModal = ({ eventId, onClose }: AdminSeatBookingModa
                 </div>
                 
                 {Array.from(new Set(seats.map(s => s.rowNum))).sort().map(rowNum => {
-                  const rowSeats = seats.filter(s => s.rowNum === rowNum).sort((a, b) => a.seatNumber.localeCompare(b.seatNumber));
+                  const rowSeats = seats.filter(s => s.rowNum === rowNum).sort((a, b) => a.seatNumber - b.seatNumber);
                   return (
                     <div key={rowNum} className="flex justify-center gap-2">
                       <div className="w-8 flex items-center justify-center font-mono text-sm text-slate-400 font-medium">
-                        {String.fromCharCode(64 + parseInt(rowNum))}
+                        {rowNum}
                       </div>
                       {rowSeats.map(seat => {
                         const isSelected = selectedSeats.includes(seat.id.toString());
-                        const isBooked = seat.status === 'BOOKED';
-                        const isVip = seat.seatType === 'VIP';
+                        const isBooked = seat.status?.toUpperCase() === 'BOOKED';
+                        const isVip = seat.type === 'VIP';
 
                         let baseClass = "w-8 h-8 rounded-t-lg rounded-b-sm border transition-all text-[10px] flex items-center justify-center cursor-pointer";
                         let colorClass = "";

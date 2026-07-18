@@ -106,6 +106,8 @@ public class BookingServiceImpl implements BookingService {
             EventResponse event = eventServiceClient.getEventById(bookingRequest.getEventId());
             BigDecimal totalAmount = BigDecimal.ZERO;
 
+            List<String> seatDetailList = new ArrayList<>();
+
             for (Long seatId : sortedSeatIds) {
                 SeatResponse seat = eventServiceClient.getSeatById(seatId);
 
@@ -117,7 +119,7 @@ public class BookingServiceImpl implements BookingService {
                     throw new ApiException(HttpStatus.CONFLICT, "Seat " + seat.getSeatNumber() + " is already booked or not available");
                 }
 
-                // Temporary reservation is no longer needed since we hold the Redis lock
+                seatDetailList.add(seat.getRowNum() + seat.getSeatNumber());
                 totalAmount = totalAmount.add(seat.getPrice());
             }
 
@@ -132,6 +134,8 @@ public class BookingServiceImpl implements BookingService {
 
             Booking savedBooking = bookingRepository.save(booking);
             
+            String seatDetailsStr = String.join(", ", seatDetailList);
+            
             // 4. (Removed Synchronous REST Call) Seat Status is now updated asynchronously via Event Service consuming BookingCreatedEvent.
 
             com.ticketverse.event.BookingCreatedPayload payload = com.ticketverse.event.BookingCreatedPayload.builder()
@@ -143,6 +147,11 @@ public class BookingServiceImpl implements BookingService {
                     .bookingTime(LocalDateTime.now())
                     .totalAmount(totalAmount)
                     .status(savedBooking.getBookingStatus())
+                    .eventName(event.getTitle())
+                    .eventDate(event.getEventDate() != null ? String.valueOf(event.getEventDate()) : "")
+                    .eventTime(event.getStartTime() != null ? String.valueOf(event.getStartTime()) : "")
+                    .eventVenue(event.getVenue())
+                    .seatDetails(seatDetailsStr)
                     .build();
 
             com.ticketverse.event.DomainEvent<com.ticketverse.event.BookingCreatedPayload> domainEvent = 
@@ -262,6 +271,7 @@ public class BookingServiceImpl implements BookingService {
             EventResponse event = eventServiceClient.getEventById(bookingRequest.getEventId());
             BigDecimal totalAmount = BigDecimal.ZERO;
 
+            List<String> seatDetailList = new ArrayList<>();
             for (Long seatId : sortedSeatIds) {
                 SeatResponse seat = eventServiceClient.getSeatById(seatId);
                 if (!seat.getEventId().equals(event.getId())) {
@@ -270,6 +280,7 @@ public class BookingServiceImpl implements BookingService {
                 if (!"AVAILABLE".equalsIgnoreCase(seat.getStatus())) {
                     throw new ApiException(HttpStatus.CONFLICT, "Seat " + seat.getSeatNumber() + " is already booked or not available");
                 }
+                seatDetailList.add(seat.getRowNum() + seat.getSeatNumber());
                 totalAmount = totalAmount.add(seat.getPrice());
             }
 
@@ -286,6 +297,8 @@ public class BookingServiceImpl implements BookingService {
                     .build();
 
             Booking savedBooking = bookingRepository.save(booking);
+            
+            String seatDetailsStr = String.join(", ", seatDetailList);
 
             com.ticketverse.event.BookingCreatedPayload payload = com.ticketverse.event.BookingCreatedPayload.builder()
                     .bookingId(savedBooking.getId())
@@ -296,6 +309,11 @@ public class BookingServiceImpl implements BookingService {
                     .bookingTime(LocalDateTime.now())
                     .totalAmount(totalAmount)
                     .status(savedBooking.getBookingStatus())
+                    .eventName(event.getTitle())
+                    .eventDate(event.getEventDate() != null ? String.valueOf(event.getEventDate()) : "")
+                    .eventTime(event.getStartTime() != null ? String.valueOf(event.getStartTime()) : "")
+                    .eventVenue(event.getVenue())
+                    .seatDetails(seatDetailsStr)
                     .build();
 
             com.ticketverse.event.DomainEvent<com.ticketverse.event.BookingCreatedPayload> domainEvent = 
